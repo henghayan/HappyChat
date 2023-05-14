@@ -1,0 +1,5 @@
+{
+    "description": "Legacy template",
+    "prompt": "Below is an input that describes a task. Write a response that appropriately completes the request.\n\n### Input:\n{input}\n\n### Response:",
+    "response_split": "### Response:"
+}
