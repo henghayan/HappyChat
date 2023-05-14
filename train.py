@@ -4,6 +4,8 @@ from datasets import load_dataset
 from transformers import LlamaForCausalLM, LlamaTokenizer
 import torch
 
+from loader import load_model
+
 
 def train(
         base_model: str = "",
@@ -17,7 +19,7 @@ def train(
 ):
     gradient_accumulation_steps = batch_size // micro_batch_size
 
-    model = LlamaForCausalLM.from_pretrained(base_model, load_in_8bit=True, torch_dtype=torch.float16)
+    model = load_model(base_model, torch_dtype=torch.float16)
     tokenizer = LlamaTokenizer.from_pretrained(base_model)
     tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
     tokenizer.padding_side = "left"  # Allow batched inference
