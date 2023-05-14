@@ -38,7 +38,7 @@ def train(
         tokenized_full_prompt = tokenize(full_prompt)
         return tokenized_full_prompt
 
-    data = load_dataset(data_path)
+    data = load_dataset('json', data_path)
     train_data = data["train"].map(generate_and_tokenize_prompt)
 
     trainer = transformers.Trainer(
