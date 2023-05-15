@@ -40,7 +40,7 @@ def test_train(base_model, data_path):
         base_model,
         torch_dtype=torch.float16,
         trust_remote_code=True,
-        load_8bit=True
+        load_in_8bit=True
     )
 
     print("model load ok")

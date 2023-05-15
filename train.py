@@ -19,12 +19,7 @@ def train(
     tokenizer.pad_token_id = 0
     tokenizer.padding_side = "left"
 
-    model = transformers.AutoModelForCausalLM.from_pretrained(
-        base_model,
-        torch_dtype=torch.float16,
-        trust_remote_code=True,
-        load_8bit=True
-    )
+    model = load_model(base_model, torch_dtype=torch.float16)
 
     print("model load ok")
     train_data = load_train_data(data_path, tokenizer, cutoff_len)
