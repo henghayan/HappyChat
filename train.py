@@ -19,13 +19,14 @@ def train(
         cutoff_len: int = 256,
 ):
     gradient_accumulation_steps = batch_size // micro_batch_size
-
+    print("start train")
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model, trust_remote_code=True, use_fast=False)
+    print("tokenizer load ok, mode load ...")
     tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
     tokenizer.padding_side = "left"  # Allow batched inference
 
     model = load_model(base_model, torch_dtype=torch.float16)
-
+    print("model load ok")
     train_data = load_train_data(data_path, tokenizer)
 
     trainer = transformers.Trainer(
@@ -50,9 +51,7 @@ def data_format_func(tokenizer, cutoff_len=256, add_eos_token=True):
     prompter = Prompter()
 
     def data_format(data_point):
-        print('start prompt format')
         full_prompt = prompter.generate_prompt(data_point["input"], data_point["output"])
-        print('start data tokenizer')
         result = tokenizer(full_prompt, truncation=True, max_length=cutoff_len, padding=False, return_tensors=None)
         if result["input_ids"][-1] != tokenizer.eos_token_id and len(
                 result["input_ids"]) < cutoff_len and add_eos_token:
@@ -65,7 +64,7 @@ def data_format_func(tokenizer, cutoff_len=256, add_eos_token=True):
 
 
 def load_train_data(data_path, tokenizer):
-    data = load_dataset('json', data_path)
+    data = load_dataset('json', data_files=data_path)
     train_data = data["train"].map(data_format_func(tokenizer))
     return train_data
 
