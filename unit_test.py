@@ -22,6 +22,9 @@ def main(model_path):
     generated_text = tokenizer.decode(generated_text_ids[0], skip_special_tokens=True)
     print(generated_text)
 
+def test_load_json():
+
+
 
 if __name__ == "__main__":
     # Set model to evaluation mode
