@@ -16,10 +16,16 @@ def train(
     print("start train")
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model, trust_remote_code=True, use_fast=False)
     print("tokenizer load ok, mode load ...")
-    tokenizer.pad_token_id = 0  # unk. we want this to be different from the eos token
-    tokenizer.padding_side = "left"  # Allow batched inference
+    tokenizer.pad_token_id = 0
+    tokenizer.padding_side = "left"
 
-    model = load_model(base_model, torch_dtype=torch.float16)
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        base_model,
+        torch_dtype=torch.float16,
+        trust_remote_code=True,
+        load_8bit=True
+    )
+
     print("model load ok")
     train_data = load_train_data(data_path, tokenizer, cutoff_len)
 
