@@ -26,7 +26,7 @@ def train(
 
     model = load_model(base_model, torch_dtype=torch.float16)
 
-    train_data = load_train_data(data_path)
+    train_data = load_train_data(data_path, tokenizer)
 
     trainer = transformers.Trainer(
         model=model,
@@ -50,7 +50,9 @@ def data_format_func(tokenizer, cutoff_len=256, add_eos_token=True):
     prompter = Prompter()
 
     def data_format(data_point):
+        print('start prompt format')
         full_prompt = prompter.generate_prompt(data_point["input"], data_point["output"])
+        print('start data tokenizer')
         result = tokenizer(full_prompt, truncation=True, max_length=cutoff_len, padding=False, return_tensors=None)
         if result["input_ids"][-1] != tokenizer.eos_token_id and len(
                 result["input_ids"]) < cutoff_len and add_eos_token:

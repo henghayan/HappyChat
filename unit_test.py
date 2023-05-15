@@ -33,9 +33,9 @@ if __name__ == "__main__":
     # Set model to evaluation mode
     # main(sys.argv[1])
     # main("/D/hchat/mpt")
-    token_path = ""
-    data_path = '/d/HappyChat/train_data/test.json'
+    token_path = "/hy-tmp/fs7b"
+    data_path = '/hy-tmp/test.json'
     print("token_path", token_path)
-    tokenizer = AutoTokenizer.from_pretrained(token_path, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(token_path, trust_remote_code=True, use_fast=False)
     print("token ok")
     test_load_json(data_path, tokenizer)
