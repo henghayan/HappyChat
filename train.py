@@ -10,7 +10,7 @@ from prompter import Prompter
 
 def train(
         base_model: str = "", data_path: str = "", output_dir: str = "",
-        batch_size=128, micro_batch_size=4, num_epochs=3, learning_rate=3e-4, cutoff_len=256,
+        batch_size=32, micro_batch_size=1, num_epochs=3, learning_rate=3e-4, cutoff_len=128,
 ):
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
     print("start train")
@@ -21,7 +21,7 @@ def train(
 
     model = load_model(base_model, torch_dtype=torch.float16)
     print("model load ok")
-    train_data = load_train_data(data_path, tokenizer)
+    train_data = load_train_data(data_path, tokenizer, cutoff_len)
 
     trainer = transformers.Trainer(
         model=model,
@@ -57,9 +57,9 @@ def data_format_func(tokenizer, cutoff_len=256, add_eos_token=True):
     return data_format
 
 
-def load_train_data(data_path, tokenizer):
+def load_train_data(data_path, tokenizer, cutoff_len=256):
     data = load_dataset('json', data_files=data_path)
-    train_data = data["train"].map(data_format_func(tokenizer))
+    train_data = data["train"].map(data_format_func(tokenizer, cutoff_len))
     return train_data
 
 
