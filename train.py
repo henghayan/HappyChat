@@ -9,16 +9,10 @@ from prompter import Prompter
 
 
 def train(
-        base_model: str = "",
-        data_path: str = "",
-        output_dir: str = "",
-        batch_size: int = 128,
-        micro_batch_size: int = 4,
-        num_epochs: int = 3,
-        learning_rate: float = 3e-4,
-        cutoff_len: int = 256,
+        base_model: str = "", data_path: str = "", output_dir: str = "",
+        batch_size=128, micro_batch_size=4, num_epochs=3, learning_rate=3e-4, cutoff_len=256,
 ):
-    gradient_accumulation_steps = batch_size // micro_batch_size
+    gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
     print("start train")
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model, trust_remote_code=True, use_fast=False)
     print("tokenizer load ok, mode load ...")
@@ -33,12 +27,12 @@ def train(
         model=model,
         train_dataset=train_data,
         args=transformers.TrainingArguments(
-            per_device_train_batch_size=micro_batch_size,
+            per_device_train_batch_size=int(micro_batch_size),
             gradient_accumulation_steps=gradient_accumulation_steps,
-            num_train_epochs=num_epochs,
-            learning_rate=learning_rate,
+            num_train_epochs=int(num_epochs),
+            learning_rate=float(learning_rate),
             fp16=True,
-            output_dir=output_dir,
+            output_dir=output_dir
         ),
         data_collator=transformers.DataCollatorForSeq2Seq(tokenizer, return_tensors="pt", padding=True),
     )

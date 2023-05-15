@@ -34,7 +34,6 @@ class Prompter(object):
         )
         if output_label:
             res = f"{res}{output_label}"
-        print(res)
         return res
 
     def get_response(self, output: str) -> str:
