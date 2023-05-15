@@ -22,8 +22,9 @@ class Prompter(object):
             )
 
     def generate_prompt(
-        self,
-        input_data: str,
+            self,
+            input_data: str,
+            output_label: str = None,
     ) -> str:
         # returns the full prompt from instruction and optional input
         # if a label (=response, =output) is provided, it's also appended.
@@ -31,7 +32,8 @@ class Prompter(object):
         res = t.format(
             input=input_data
         )
-
+        if output_label:
+            res = f"{res}{output_label}"
         print(res)
         return res
 
