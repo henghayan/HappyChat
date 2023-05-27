@@ -1,5 +1,6 @@
 import sys
 import argparse
+import gc
 
 import gradio as gr
 import torch
@@ -89,7 +90,7 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
     return evaluate
 
 
-def main(path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lora=False):
+def main(path, tokenizer_path, device="cuda", share=False, load_8bit=False, lora=False):
     print("model_path", tokenizer_path)
     print("token loading ...")
     tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True, use_fast=False)
@@ -113,6 +114,8 @@ def main(path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lo
 
 
 def GUI(model, tokenizer, device, share=False):
+    gc.collect()
+    torch.cuda.empty_cache()
     evaluate_func = wrap_evaluate(model, tokenizer, device)
     print("start init gui")
     gr.Interface(

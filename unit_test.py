@@ -88,10 +88,8 @@ def test_compress():
 
 def test_compress_save(model_path, output_path):
     model = load_model(model_path)
-    print("pre_model", model.state_dict())
     compress_module(model, "cuda")
     decompress_module(model)
-    print("decompress_model", model.state_dict())
     model.save_pretrained(output_path)
 
 

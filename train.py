@@ -48,6 +48,7 @@ def train(
     if c_8bit:
         decompress_module(model, dtype)
     if gui:
+        model.eval()
         GUI(model, tokenizer, device)
     if save:
         model.save_pretrained(output_dir)
