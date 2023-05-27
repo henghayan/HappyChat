@@ -67,12 +67,12 @@ def compress(tensor, config):
     original_shape = tensor.shape
     num_groups = (original_shape[group_dim] + group_size - 1) // group_size
     new_shape = (original_shape[:group_dim] + (num_groups, group_size) +
-                 original_shape[group_dim+1:])
+                 original_shape[group_dim + 1:])
 
     # Pad
     pad_len = (group_size - original_shape[group_dim] % group_size) % group_size
     if pad_len != 0:
-        pad_shape = original_shape[:group_dim] + (pad_len,) + original_shape[group_dim+1:]
+        pad_shape = original_shape[:group_dim] + (pad_len,) + original_shape[group_dim + 1:]
         tensor = torch.cat([
             tensor,
             torch.zeros(pad_shape, dtype=tensor.dtype, device=tensor.device)],
@@ -120,9 +120,9 @@ def decompress(packed_data, config):
     pad_len = (group_size - original_shape[group_dim] % group_size) % group_size
     if pad_len:
         padded_original_shape = (
-            original_shape[:group_dim] +
-            (original_shape[group_dim] + pad_len,) +
-            original_shape[group_dim+1:])
+                original_shape[:group_dim] +
+                (original_shape[group_dim] + pad_len,) +
+                original_shape[group_dim + 1:])
         data = data.reshape(padded_original_shape)
         indices = [slice(0, x) for x in original_shape]
         return data[indices].contiguous()
@@ -134,21 +134,25 @@ def decompress_module(module):
     for attr_str in dir(module):
         target_attr = getattr(module, attr_str)
         if isinstance(target_attr, CLinear):
-            attr_weight = target_attr.weight
-            attr_bias = target_attr.bias
+            # attr_weight = target_attr.weight
+            # attr_bias = target_attr.bias
             decompressed_weight = decompress(target_attr.weight, default_compression_config)
-            setattr(module, attr_str, torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0]))
-            temp_data = getattr(module, attr_str).weight.data
-            temp_bias = getattr(module, attr_str).bias.data
-            getattr(module, attr_str).weight.data.copy_(decompressed_weight)
-            try:
+            if target_attr.bias is None:
+                setattr(module, attr_str,
+                        torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0], bias=False))
+            else:
+                setattr(module, attr_str, torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0]))
                 getattr(module, attr_str).bias.data.copy_(target_attr.bias.data)
-            except Exception as e:
-                print("attr_weight", attr_weight)
-                print("attr_bias", attr_bias)
-                print("temp_data", temp_data)
-                print("temp_bias", temp_bias)
-                raise e
+            # temp_data = getattr(module, attr_str).weight.data
+            # temp_bias = getattr(module, attr_str).bias.data
+            getattr(module, attr_str).weight.data.copy_(decompressed_weight)
+            # try:
+            #     pass
+            # except Exception as e:
+            #     print("attr_weight", attr_weight)
+            #     print("attr_bias", attr_bias)
+            #     print("temp_data", temp_data)
+            #     print("temp_bias", temp_bias)
+            #     raise e
     for name, child in module.named_children():
         decompress_module(child)
-
