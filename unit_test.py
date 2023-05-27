@@ -3,9 +3,11 @@ import sys
 import transformers
 from transformers import AutoTokenizer
 import torch
+import torch.nn as nn
 from train import load_train_data
 from loader import compress_8bit
-from sample_transformer import *
+from compression import compress_module, decompress_module
+from loader import load_model
 
 
 def main(model_path):
@@ -46,7 +48,7 @@ def test_train(base_model, data_path, mc_size=1):
     )
 
     print("model load ok")
-   # compress_8bit(model)
+    # compress_8bit(model)
     print("model load ok")
     train_data = load_train_data(data_path, tokenizer, 256)
 
@@ -58,7 +60,7 @@ def test_train(base_model, data_path, mc_size=1):
             gradient_accumulation_steps=2,
             num_train_epochs=int(1),
             learning_rate=float(0.01),
-            #fp16=True,
+            # fp16=True,
             output_dir="/hy-tmp/out"
         ),
         data_collator=transformers.DataCollatorForSeq2Seq(tokenizer, return_tensors="pt", padding=True),
@@ -71,8 +73,10 @@ class TempTransformer(nn.Module):
     def __init__(self):
         super(TempTransformer, self).__init__()
         self.fc = nn.Linear(8, 3)
+
     def forward(self):
         pass
+
 
 def test_compress():
     model = TempTransformer()
@@ -80,6 +84,16 @@ def test_compress():
     compress_module(model, "cpu")
     decompress_module(model)
     print("decompress_model", model.state_dict())
+
+
+def test_compress_save(model_path, output_path):
+    model = load_model(model_path)
+    print("pre_model", model.state_dict())
+    compress_module(model, "cuda")
+    decompress_module(model)
+    print("decompress_model", model.state_dict())
+    model.save_pretrained(output_path)
+
 
 if __name__ == "__main__":
     # Set model to evaluation mode
@@ -92,4 +106,5 @@ if __name__ == "__main__":
     # print("token ok")
     # test_load_json(data_path, tokenizer)
     # test_train(token_path, data_path, 1)
-    test_compress()
+    # test_compress()
+    test_compress_save('/hy-tmp/fs7b', '/hy-tmp/temp_model')
