@@ -12,7 +12,7 @@ from typing import List
 from compression import compress_module
 
 
-def load_model(model_path, torch_dtype=torch.bfloat16, **kv):
+def load_model(model_path, torch_dtype=torch.float16, **kv):
     model = transformers.AutoModelForCausalLM.from_pretrained(
         model_path,
         torch_dtype=torch_dtype,
