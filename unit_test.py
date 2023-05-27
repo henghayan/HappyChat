@@ -3,8 +3,9 @@ import sys
 import transformers
 from transformers import AutoTokenizer
 import torch
-
 from train import load_train_data
+from loader import compress_8bit
+from sample_transformer import *
 
 
 def main(model_path):
@@ -29,7 +30,7 @@ def test_load_json(path, tokenizer):
     load_train_data(path, tokenizer)
 
 
-def test_train(base_model, data_path):
+def test_train(base_model, data_path, mc_size=1):
     print("start train")
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model, trust_remote_code=True, use_fast=False)
     print("tokenizer load ok, mode load ...")
@@ -38,24 +39,26 @@ def test_train(base_model, data_path):
 
     model = transformers.AutoModelForCausalLM.from_pretrained(
         base_model,
-        torch_dtype=torch.float16,
+        load_in_8bit=True,
         trust_remote_code=True,
-        load_in_8bit=True
+        torch_dtype=torch.float16,
+        device_map='auto'
     )
 
     print("model load ok")
+   # compress_8bit(model)
     print("model load ok")
-    train_data = load_train_data(data_path, tokenizer, 128)
+    train_data = load_train_data(data_path, tokenizer, 256)
 
     trainer = transformers.Trainer(
         model=model,
         train_dataset=train_data,
         args=transformers.TrainingArguments(
-            per_device_train_batch_size=int(1),
+            per_device_train_batch_size=mc_size,
             gradient_accumulation_steps=2,
             num_train_epochs=int(1),
             learning_rate=float(0.01),
-            fp16=True,
+            #fp16=True,
             output_dir="/hy-tmp/out"
         ),
         data_collator=transformers.DataCollatorForSeq2Seq(tokenizer, return_tensors="pt", padding=True),
@@ -64,14 +67,29 @@ def test_train(base_model, data_path):
     trainer.train()
 
 
+class TempTransformer(nn.Module):
+    def __init__(self):
+        super(TempTransformer, self).__init__()
+        self.fc = nn.Linear(8, 3)
+    def forward(self):
+        pass
+
+def test_compress():
+    model = TempTransformer()
+    print("pre_model", model.state_dict())
+    compress_module(model, "cpu")
+    decompress_module(model)
+    print("decompress_model", model.state_dict())
+
 if __name__ == "__main__":
     # Set model to evaluation mode
     # main(sys.argv[1])
     # main("/D/hchat/mpt")
-    token_path = "/hy-tmp/fs7b"
-    data_path = '/hy-tmp/test.json'
+    # token_path = "/hy-tmp/fs7b"
+    # data_path = '/hy-tmp/test.json'
     # print("token_path", token_path)
     # tokenizer = AutoTokenizer.from_pretrained(token_path, trust_remote_code=True, use_fast=False)
     # print("token ok")
     # test_load_json(data_path, tokenizer)
-    test_train(token_path, data_path)
+    # test_train(token_path, data_path, 1)
+    test_compress()

@@ -17,6 +17,7 @@ def load_model(model_path, torch_dtype=torch.bfloat16, **kv):
         model_path,
         torch_dtype=torch_dtype,
         trust_remote_code=True,
+        device_map="auto",
         **kv
     )
     return model

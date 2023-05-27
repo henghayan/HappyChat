@@ -6,15 +6,17 @@ import torch
 
 from loader import load_model
 from prompter import Prompter
+from compression import compress_module, decompress_module
 
 
 def train(
-        base_model: str = "", data_path: str = "", output_dir: str = "",
-        batch_size=32, micro_batch_size=1, num_epochs=3, learning_rate=3e-4, cutoff_len=128,
+        base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, device="cuda",
+        batch_size=32, micro_batch_size=1, num_epochs=3, learning_rate=3e-3, cutoff_len=128,
 ):
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
     print("start train")
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model, trust_remote_code=True, use_fast=False)
+    train_data = load_train_data(data_path, tokenizer, int(cutoff_len))
     print("tokenizer load ok, mode load ...")
     tokenizer.pad_token_id = 0
     tokenizer.padding_side = "left"
@@ -22,8 +24,9 @@ def train(
     model = load_model(base_model, torch_dtype=torch.float16)
 
     print("model load ok")
-    train_data = load_train_data(data_path, tokenizer, cutoff_len)
-
+    if c_8bit:
+        compress_module(model, device)
+    print("model compress ok")
     trainer = transformers.Trainer(
         model=model,
         train_dataset=train_data,
@@ -32,13 +35,15 @@ def train(
             gradient_accumulation_steps=gradient_accumulation_steps,
             num_train_epochs=int(num_epochs),
             learning_rate=float(learning_rate),
-            fp16=True,
+            #fp16=True,
             output_dir=output_dir
         ),
         data_collator=transformers.DataCollatorForSeq2Seq(tokenizer, return_tensors="pt", padding=True),
     )
 
     trainer.train()
+    if c_8bit:
+        decompress_module(model)
     model.save_pretrained(output_dir)
 
 

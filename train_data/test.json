@@ -1,258 +1,245 @@
+
 [
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  },
-  {
-    "input": "What are the three primary colors?",
-    "output": "The three primary colors are red, blue, and yellow."
-  }
+    {
+        "input": "Explain how to solve the system of equations: x + y = 5, x - y = 1",
+        "output": "First, you can add the two equations together. This eliminates the y variable, giving you 2x = 6. Solving for x, you get x = 3. Then, substituting x = 3 into the first equation gives you 3 + y = 5, so y = 2."
+    },
+    {
+        "input": "Explain how to solve the system of equations: 2x - 3y = 12, 5x + 4y = -3",
+        "output": "First, multiply the first equation by 4 and the second equation by 3. This will allow you to eliminate y when you add the equations together, giving you 11x = -21, or x = -21/11. Substituting x = -21/11 into the first equation gives you y = -2."
+    },
+    {
+        "input": "Solve the system of equations: 3x + 2y = 11, 6x - 5y = 27",
+        "output": "The solution to the system of equations is x = 3, y = 2"
+    },
+    {
+        "input": "Solve the system of equations: 7x + 4y = 19, 2x - 5y = -18",
+        "output": "The solution to the system of equations is x = 1, y = 3"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x - 2y = 4, 3x + 4y = 12",
+        "output": "First, you can multiply the first equation by 3 and the second equation by 1, then add the two equations together. This eliminates the y variable, giving you 6x = 24. Solving for x, you get x = 4. Then, substituting x = 4 into the first equation gives you y = 0."
+    },
+    {
+        "input": "Solve the system of equations: 4x - y = 16, 2x + 3y = 4",
+        "output": "The solution to the system of equations is x = 4, y = -4"
+    },
+    {
+        "input": "Solve the system of equations: 5x + 2y = 23, 3x - 4y = 7",
+        "output": "The solution to the system of equations is x = 3, y = 5"
+    },
+    {
+        "input": "Solve the system of equations: 2x - 3y = 10, 5x + 6y = 10",
+        "output": "The solution to the system of equations is x = 4, y = 0"
+    },
+    {
+        "input": "Solve the system of equations: 6x - 2y = 14, 3x + 5y = 5",
+        "output": "The solution to the system of equations is x = 2, y = -1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x + y = 8, x - y = 4",
+        "output": "First, you can add the two equations together. This eliminates the y variable, giving you 2x = 12. Solving for x, you get x = 6. Then, substituting x = 6 into the first equation gives you 6 + y = 8, so y = 2."
+    },
+
+    {
+        "input": "Solve the system of equations: 4x - 2y = 8, x + y = 3",
+        "output": "The solution to the system of equations is x = 2, y = 1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 3x + 4y = 24, 2x - y = 3",
+        "output": "First, multiply the second equation by 4 to make the coefficients of y in both equations equal, then add the two equations together. This gives you 11x = 36, so x = 36/11. Substituting x = 36/11 into the second equation gives you y = 3/11."
+    },
+    {
+        "input": "Solve the system of equations: 7x - 3y = 14, 5x + 2y = 19",
+        "output": "The solution to the system of equations is x = 3, y = 1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x + y = 6, 2x - 3y = 12",
+        "output": "First, multiply the first equation by 3 and the second equation by 1, then subtract the second equation from the first. This gives you 5x = 30, so x = 6. Substituting x = 6 into the first equation gives you y = 0."
+    },
+    {
+        "input": "Solve the system of equations: 4x + 5y = 20, 3x - 2y = 1",
+        "output": "The solution to the system of equations is x = 2, y = 3"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 2x + 3y = 18, 4x - y = 11",
+        "output": "First, multiply the first equation by 1 and the second equation by 3, then add the two equations together. This gives you 14x = 42, so x = 3. Substituting x = 3 into the first equation gives you y = 4."
+    },
+    {
+        "input": "Solve the system of equations: 5x - 2y = 10, 3x + 4y = 24",
+        "output": "The solution to the system of equations is x = 4, y = 5"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x - y = 4, 3x + 2y = 14",
+        "output": "First, multiply the first equation by 2 and the second equation by 1, then add the two equations together. This gives you 5x = 22, so x = 22/5. Substituting x = 22/5 into the first equation gives you y = -2/5."
+    },
+    {
+        "input": "Solve the system of equations: 6x + 3y = 27, 4x - 5y = 20",
+        "output": "The solution to the system of equations is x = 4, y = 1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 2x + y = 8, x - 2y = 4",
+        "output": "First, multiply the first equation by 2 and the second equation by 1, then add the two equations together. This gives you 5x = 20, so x = 4. Substituting x = 4 into the first equation gives you y = 0."
+    },
+    {
+        "input": "Solve the system of equations: 4x - 3y = 12, 2x + y = 6",
+        "output": "The solution to the system of equations is x = 3, y = 0"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 3x + 4y = 24, 5x - 2y = 14",
+        "output": "First, multiply the first equation by 2 and the second equation by 4, then add the two equations together. This gives you 26x = 104, so x = 4. Substituting x = 4 into the first equation gives you y = 3."
+    },
+    {
+        "input": "Solve the system of equations: 7x + 2y = 28, 3x - 4y = 6",
+        "output": "The solution to the system of equations is x = 3, y = 2"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x + y = 6, 3x - 2y = 10",
+        "output": "First, multiply the first equation by 2 and the second equation by 1, then subtract the second equation from the first. This gives you 5x = 20, so x = 4. Substituting x = 4 into the first equation gives you y = 2."
+    },
+    {
+        "input": "Solve the system of equations: 4x + 5y = 20, 2x - 3y = 4",
+        "output": "The solution to the system of equations is x = 2, y = 3"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 3x + y = 13, 2x - 4y = 8",
+        "output": "First, multiply the first equation by 4 and the second equation by 1, then add the two equations together. This gives you 14x = 60, so x = 60/14. Substituting x = 60/14 into the first equation gives you y = -1."
+    },
+    {
+        "input": "Solve the system of equations: 5x - 3y = 15, x + 2y = 5",
+        "output": "The solution to the system of equations is x = 3, y = 1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 2x - y = 8, 4x + 3y = 20",
+        "output": "First, multiply the first equation by 3 and the second equation by 1, then add the two equations together. This gives you 10x = 44, so x = 44/10. Substituting x = 44/10 into the first equation gives you y = -4."
+    },
+    {
+        "input": "Solve the system of equations: 6x + 2y = 24, 3x - y = 9",
+        "output": "The solution to the system of equations is x = 3, y = 3"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x + y = 7, 2x - y = 5",
+        "output": "First, add the two equations together. This eliminates the y variable, giving you 3x = 12. Solving for x, you get x = 4. Then, substituting x = 4 into the first equation gives you 4 + y = 7, so y = 3."
+    },
+        {
+        "input": "Explain how to solve the system of equations: x + y = 5, x - y = 1",
+        "output": "First, you can add the two equations together. This eliminates the y variable, giving you 2x = 6. Solving for x, you get x = 3. Then, substituting x = 3 into the first equation gives you 3 + y = 5, so y = 2."
+    },
+    {
+        "input": "Explain how to solve the system of equations: 2x - 3y = 12, 5x + 4y = -3",
+        "output": "First, multiply the first equation by 4 and the second equation by 3. This will allow you to eliminate y when you add the equations together, giving you 11x = -21, or x = -21/11. Substituting x = -21/11 into the first equation gives you y = -2."
+    },
+    {
+        "input": "Solve the system of equations: 3x + 2y = 11, 6x - 5y = 27",
+        "output": "The solution to the system of equations is x = 3, y = 2"
+    },
+    {
+        "input": "Solve the system of equations: 7x + 4y = 19, 2x - 5y = -18",
+        "output": "The solution to the system of equations is x = 1, y = 3"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x - 2y = 4, 3x + 4y = 12",
+        "output": "First, you can multiply the first equation by 3 and the second equation by 1, then add the two equations together. This eliminates the y variable, giving you 6x = 24. Solving for x, you get x = 4. Then, substituting x = 4 into the first equation gives you y = 0."
+    },
+    {
+        "input": "Solve the system of equations: 4x - y = 16, 2x + 3y = 4",
+        "output": "The solution to the system of equations is x = 4, y = -4"
+    },
+    {
+        "input": "Solve the system of equations: 5x + 2y = 23, 3x - 4y = 7",
+        "output": "The solution to the system of equations is x = 3, y = 5"
+    },
+    {
+        "input": "Solve the system of equations: 2x - 3y = 10, 5x + 6y = 10",
+        "output": "The solution to the system of equations is x = 4, y = 0"
+    },
+    {
+        "input": "Solve the system of equations: 6x - 2y = 14, 3x + 5y = 5",
+        "output": "The solution to the system of equations is x = 2, y = -1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x + y = 8, x - y = 4",
+        "output": "First, you can add the two equations together. This eliminates the y variable, giving you 2x = 12. Solving for x, you get x = 6. Then, substituting x = 6 into the first equation gives you 6 + y = 8, so y = 2."
+    },
+
+    {
+        "input": "Solve the system of equations: 4x - 2y = 8, x + y = 3",
+        "output": "The solution to the system of equations is x = 2, y = 1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 3x + 4y = 24, 2x - y = 3",
+        "output": "First, multiply the second equation by 4 to make the coefficients of y in both equations equal, then add the two equations together. This gives you 11x = 36, so x = 36/11. Substituting x = 36/11 into the second equation gives you y = 3/11."
+    },
+    {
+        "input": "Solve the system of equations: 7x - 3y = 14, 5x + 2y = 19",
+        "output": "The solution to the system of equations is x = 3, y = 1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x + y = 6, 2x - 3y = 12",
+        "output": "First, multiply the first equation by 3 and the second equation by 1, then subtract the second equation from the first. This gives you 5x = 30, so x = 6. Substituting x = 6 into the first equation gives you y = 0."
+    },
+    {
+        "input": "Solve the system of equations: 4x + 5y = 20, 3x - 2y = 1",
+        "output": "The solution to the system of equations is x = 2, y = 3"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 2x + 3y = 18, 4x - y = 11",
+        "output": "First, multiply the first equation by 1 and the second equation by 3, then add the two equations together. This gives you 14x = 42, so x = 3. Substituting x = 3 into the first equation gives you y = 4."
+    },
+    {
+        "input": "Solve the system of equations: 5x - 2y = 10, 3x + 4y = 24",
+        "output": "The solution to the system of equations is x = 4, y = 5"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x - y = 4, 3x + 2y = 14",
+        "output": "First, multiply the first equation by 2 and the second equation by 1, then add the two equations together. This gives you 5x = 22, so x = 22/5. Substituting x = 22/5 into the first equation gives you y = -2/5."
+    },
+    {
+        "input": "Solve the system of equations: 6x + 3y = 27, 4x - 5y = 20",
+        "output": "The solution to the system of equations is x = 4, y = 1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 2x + y = 8, x - 2y = 4",
+        "output": "First, multiply the first equation by 2 and the second equation by 1, then add the two equations together. This gives you 5x = 20, so x = 4. Substituting x = 4 into the first equation gives you y = 0."
+    },
+    {
+        "input": "Solve the system of equations: 4x - 3y = 12, 2x + y = 6",
+        "output": "The solution to the system of equations is x = 3, y = 0"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 3x + 4y = 24, 5x - 2y = 14",
+        "output": "First, multiply the first equation by 2 and the second equation by 4, then add the two equations together. This gives you 26x = 104, so x = 4. Substituting x = 4 into the first equation gives you y = 3."
+    },
+    {
+        "input": "Solve the system of equations: 7x + 2y = 28, 3x - 4y = 6",
+        "output": "The solution to the system of equations is x = 3, y = 2"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x + y = 6, 3x - 2y = 10",
+        "output": "First, multiply the first equation by 2 and the second equation by 1, then subtract the second equation from the first. This gives you 5x = 20, so x = 4. Substituting x = 4 into the first equation gives you y = 2."
+    },
+    {
+        "input": "Solve the system of equations: 4x + 5y = 20, 2x - 3y = 4",
+        "output": "The solution to the system of equations is x = 2, y = 3"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 3x + y = 13, 2x - 4y = 8",
+        "output": "First, multiply the first equation by 4 and the second equation by 1, then add the two equations together. This gives you 14x = 60, so x = 60/14. Substituting x = 60/14 into the first equation gives you y = -1."
+    },
+    {
+        "input": "Solve the system of equations: 5x - 3y = 15, x + 2y = 5",
+        "output": "The solution to the system of equations is x = 3, y = 1"
+    },
+    {
+        "input": "Explain how to solve the system of equations: 2x - y = 8, 4x + 3y = 20",
+        "output": "First, multiply the first equation by 3 and the second equation by 1, then add the two equations together. This gives you 10x = 44, so x = 44/10. Substituting x = 44/10 into the first equation gives you y = -4."
+    },
+    {
+        "input": "Solve the system of equations: 6x + 2y = 24, 3x - y = 9",
+        "output": "The solution to the system of equations is x = 3, y = 3"
+    },
+    {
+        "input": "Explain how to solve the system of equations: x + y = 7, 2x - y = 5",
+        "output": "First, add the two equations together. This eliminates the y variable, giving you 3x = 12. Solving for x, you get x = 4. Then, substituting x = 4 into the first equation gives you 4 + y = 7, so y = 3."
+    }
 ]

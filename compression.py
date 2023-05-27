@@ -1,3 +1,5 @@
+import gc
+
 import dataclasses
 
 import torch
@@ -25,9 +27,15 @@ class CLinear(nn.Module):
 
     def __init__(self, weight, bias, device):
         super().__init__()
-
-        self.weight = compress(weight.data.to(device), default_compression_config)
+        if weight is None:
+            self.weight = None
+        elif isinstance(weight, Tensor):
+            self.weight = compress(weight.data.to(device), default_compression_config)
+        else:
+            self.weight = weight
         self.bias = bias
+        gc.collect()
+        torch.cuda.empty_cache()
 
     def forward(self, input: Tensor) -> Tensor:
         weight = decompress(self.weight, default_compression_config)
@@ -38,8 +46,11 @@ def compress_module(module, target_device):
     for attr_str in dir(module):
         target_attr = getattr(module, attr_str)
         if type(target_attr) == torch.nn.Linear:
-            setattr(module, attr_str,
-                CLinear(target_attr.weight, target_attr.bias, target_device))
+            setattr(
+                module,
+                attr_str,
+                CLinear(target_attr.weight, target_attr.bias, target_device),
+            )
     for name, child in module.named_children():
         compress_module(child, target_device)
 
@@ -117,3 +128,20 @@ def decompress(packed_data, config):
         return data[indices].contiguous()
     else:
         return data.view(original_shape)
+
+
+def decompress_module(module):
+    for attr_str in dir(module):
+        target_attr = getattr(module, attr_str)
+        if isinstance(target_attr, CLinear):
+            # attr_weight = target_attr.weight
+            # attr_bias = target_attr.bias
+            decompressed_weight = decompress(target_attr.weight, default_compression_config)
+            setattr(module, attr_str, torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0]))
+            # temp_data = getattr(module, attr_str).weight.data
+            # temp_bias = getattr(module, attr_str).bias.data
+            getattr(module, attr_str).weight.data.copy_(decompressed_weight)
+            getattr(module, attr_str).bias.data.copy_(target_attr.bias.data)
+    for name, child in module.named_children():
+        decompress_module(child)
+
