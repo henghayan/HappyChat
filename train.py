@@ -7,11 +7,12 @@ import torch
 from loader import load_model
 from prompter import Prompter
 from compression import compress_module, decompress_module
+from chat_gui import GUI
 
 
 def train(
         base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, device="cuda",
-        batch_size=32, micro_batch_size=1, num_epochs=3, learning_rate=3e-3, cutoff_len=128,
+        batch_size=32, micro_batch_size=1, num_epochs=3, learning_rate=3e-3, cutoff_len=128, gui=False, save=True
 ):
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
     print("start train")
@@ -46,7 +47,11 @@ def train(
     trainer.train()
     if c_8bit:
         decompress_module(model, dtype)
-    model.save_pretrained(output_dir)
+    if gui:
+        GUI(model, tokenizer, device)
+    if save:
+        model.save_pretrained(output_dir)
+
 
 
 def data_format_func(tokenizer, cutoff_len=256, add_eos_token=True):

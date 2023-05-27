@@ -109,6 +109,10 @@ def main(path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lo
         model = torch.compile(model)
     print("start init evaluate_func ")
     #
+    GUI(model, tokenizer, device, share=share)
+
+
+def GUI(model, tokenizer, device, share=False):
     evaluate_func = wrap_evaluate(model, tokenizer, device)
     print("start init gui")
     gr.Interface(
@@ -247,5 +251,5 @@ def test_gr():
 
 
 if __name__ == "__main__":
-    main(get_args().model_path, get_args().model_path, get_args().c_8bit, get_args().lora)
+    main(get_args().model_path, get_args().model_path, "cuda", False, get_args().c_8bit, get_args().lora)
     # test_gr()
