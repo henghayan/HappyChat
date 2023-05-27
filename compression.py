@@ -130,7 +130,7 @@ def decompress(packed_data, config):
         return data.view(original_shape)
 
 
-def decompress_module(module):
+def decompress_module(module, dtype=torch.float16):
     for attr_str in dir(module):
         target_attr = getattr(module, attr_str)
         if isinstance(target_attr, CLinear):
@@ -139,9 +139,11 @@ def decompress_module(module):
             decompressed_weight = decompress(target_attr.weight, default_compression_config)
             if target_attr.bias is None:
                 setattr(module, attr_str,
-                        torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0], bias=False))
+                        torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0], bias=False,
+                                        dtype=dtype))
             else:
-                setattr(module, attr_str, torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0]))
+                setattr(module, attr_str,
+                        torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0], dtype=dtype))
                 getattr(module, attr_str).bias.data.copy_(target_attr.bias.data)
             # temp_data = getattr(module, attr_str).weight.data
             # temp_bias = getattr(module, attr_str).bias.data

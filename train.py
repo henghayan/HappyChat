@@ -21,7 +21,9 @@ def train(
     tokenizer.pad_token_id = 0
     tokenizer.padding_side = "left"
 
-    model = load_model(base_model, torch_dtype=torch.float16)
+    # todo 应该读取config.json 中的类型，目前写死
+    dtype = torch.float16
+    model = load_model(base_model, torch_dtype=dtype)
 
     print("model load ok")
     if c_8bit:
@@ -43,7 +45,7 @@ def train(
 
     trainer.train()
     if c_8bit:
-        decompress_module(model)
+        decompress_module(model, dtype)
     model.save_pretrained(output_dir)
 
 
@@ -70,7 +72,7 @@ def load_train_data(data_path, tokenizer, cutoff_len=256):
 
 
 def parse_args():
-    args = sys.argv[1:]  # 忽略脚本名称
+    args = sys.argv[1:]
     params = {}
     for arg in args:
         key, value = arg.split("=")
