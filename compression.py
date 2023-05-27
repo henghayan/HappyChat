@@ -134,14 +134,21 @@ def decompress_module(module):
     for attr_str in dir(module):
         target_attr = getattr(module, attr_str)
         if isinstance(target_attr, CLinear):
-            # attr_weight = target_attr.weight
-            # attr_bias = target_attr.bias
+            attr_weight = target_attr.weight
+            attr_bias = target_attr.bias
             decompressed_weight = decompress(target_attr.weight, default_compression_config)
             setattr(module, attr_str, torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0]))
-            # temp_data = getattr(module, attr_str).weight.data
-            # temp_bias = getattr(module, attr_str).bias.data
+            temp_data = getattr(module, attr_str).weight.data
+            temp_bias = getattr(module, attr_str).bias.data
             getattr(module, attr_str).weight.data.copy_(decompressed_weight)
-            getattr(module, attr_str).bias.data.copy_(target_attr.bias.data)
+            try:
+                getattr(module, attr_str).bias.data.copy_(target_attr.bias.data)
+            except Exception as e:
+                print("attr_weight", attr_weight)
+                print("attr_bias", attr_bias)
+                print("temp_data", temp_data)
+                print("temp_bias", temp_bias)
+                raise e
     for name, child in module.named_children():
         decompress_module(child)
 
