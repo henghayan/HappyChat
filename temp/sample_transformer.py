@@ -124,11 +124,11 @@ for i in range(len(text) - sequence_length):
     target_seqs.append([char_to_idx[char] for char in target_seq])
 
 # 参数设置
-d_model = 8
+d_model = 64
 num_heads = 8
-num_layers = 1
+num_layers = 2
 vocab_size = len(chars)
-n_epochs = 1
+n_epochs = 10
 print_interval = 10
 
 

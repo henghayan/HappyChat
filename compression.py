@@ -1,11 +1,11 @@
 import gc
-
 import dataclasses
 
 import torch
-from torch import Tensor
+import torch.nn.functional as F
+import torch.autograd as autograd
 import torch.nn as nn
-from torch.nn import functional as F
+from torch import Tensor
 
 
 @dataclasses.dataclass
@@ -20,85 +20,43 @@ class CompressionConfig:
 default_compression_config = CompressionConfig(
     num_bits=8, group_size=256, group_dim=1, symmetric=True, enabled=True)
 
-# class CompressLinearFunction(torch.autograd.Function):
-#     @staticmethod
-#     def forward(ctx, input, weight, bias):
-#         ctx.save_for_backward(input, weight, bias)
-#         output = F.linear(input, weight, bias)
-#         return output
-#
-#     @staticmethod
-#     def backward(ctx, grad_output):
-#         input, weight, bias = ctx.saved_tensors
-#         grad_input = grad_weight = grad_bias = None
-#         if ctx.needs_input_grad[0]:
-#             if input.dim() == 2:
-#                 grad_input = torch.matmul(grad_output, weight)
-#             else:
-#                 grad_input = torch.bmm(grad_output, weight.transpose(1, 2))
-#         if ctx.needs_input_grad[1]:
-#             if input.dim() == 2:
-#                 grad_weight = torch.matmul(input.transpose(0, 1), grad_output)
-#             else:
-#                 grad_weight = torch.bmm(input.transpose(1, 2), grad_output)
-#         if bias is not None and ctx.needs_input_grad[2]:
-#             grad_bias = grad_output.sum(0)
-#
-#         return grad_input
-#
-# class CLinear(nn.Module):
-#     def __init__(self, weight, bias, device):
-#         super().__init__()
-#         self.compress_obj = compress(weight.data.to(device), default_compression_config)
-#         self.bias = bias
-#         self.weight = weight
-#         # self.weight = nn.Parameter(self.compress_obj[0].to(torch.float32), requires_grad=True)
-#         gc.collect()
-#         torch.cuda.empty_cache()
-#
-#     def forward(self, input: Tensor) -> Tensor:
-#         return CompressLinearFunction.apply(input, self.weight, self.bias)
-
-import torch
-import torch.nn.functional as F
-import torch.autograd as autograd
-import torch.nn as nn
-from torch import Tensor
-
 
 class CompressLinearFunction(autograd.Function):
     @staticmethod
-    def forward(ctx, input, weight, bias):
-        ctx.save_for_backward(input, weight, bias)
+    def forward(ctx, input, bias, c_obj):
+        weight = decompress(c_obj.compress_obj, default_compression_config)
+        ctx.save_for_backward(input, bias)
+        ctx.c_obj = c_obj
         output = F.linear(input, weight, bias)
         return output
 
+    @staticmethod
     def backward(ctx, grad_output):
-        input, weight, bias = ctx.saved_tensors
-        grad_input = grad_weight = grad_bias = None
+        input, bias = ctx.saved_tensors
+        grad_input = grad_bias = None
 
+        weight = decompress(ctx.c_obj.compress_obj, default_compression_config)
         if ctx.needs_input_grad[0]:
-            grad_input = torch.matmul(grad_output, weight)
-            grad_input = grad_input.view(input.size())  # 重塑梯度形状，与输入形状一致
-
-        if ctx.needs_input_grad[1]:
-            grad_weight = torch.matmul(grad_output.t(), input)
-            grad_weight = grad_weight.view(weight.size())  # 重塑梯度形状，与权重形状一致
-
+            grad_input = torch.bmm(grad_output, weight.expand(grad_output.size(0), *weight.size()))
         if bias is not None and ctx.needs_input_grad[2]:
-            grad_bias = grad_output.sum(0)
-
-        return grad_input, grad_weight, grad_bias
+            grad_bias = grad_output.sum(0).sum(0)
+        weight_grad = torch.bmm(input.transpose(1, 2), grad_output).sum(0).transpose(0, 1)
+        ctx.c_obj.compress_obj = compress((weight - weight_grad * 0.03).data, default_compression_config)
+        return grad_input, grad_bias, None
 
 
 class CLinear(nn.Module):
+
     def __init__(self, weight, bias, device):
         super().__init__()
+        self.compress_obj = compress(weight.data.to(device), default_compression_config)
         self.bias = bias
         self.weight = weight
+        gc.collect()
+        torch.cuda.empty_cache()
 
     def forward(self, input: Tensor) -> Tensor:
-        return CompressLinearFunction.apply(input, self.weight, self.bias)
+        return CompressLinearFunction.apply(input, self.bias, self)
 
 
 def compress_module(module, target_device):
