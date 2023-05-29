@@ -10,7 +10,6 @@ from torch.nn import functional as F
 
 @dataclasses.dataclass
 class CompressionConfig:
-    """Group-wise quantization."""
     num_bits: int
     group_size: int
     group_dim: int
@@ -21,25 +20,85 @@ class CompressionConfig:
 default_compression_config = CompressionConfig(
     num_bits=8, group_size=256, group_dim=1, symmetric=True, enabled=True)
 
+# class CompressLinearFunction(torch.autograd.Function):
+#     @staticmethod
+#     def forward(ctx, input, weight, bias):
+#         ctx.save_for_backward(input, weight, bias)
+#         output = F.linear(input, weight, bias)
+#         return output
+#
+#     @staticmethod
+#     def backward(ctx, grad_output):
+#         input, weight, bias = ctx.saved_tensors
+#         grad_input = grad_weight = grad_bias = None
+#         if ctx.needs_input_grad[0]:
+#             if input.dim() == 2:
+#                 grad_input = torch.matmul(grad_output, weight)
+#             else:
+#                 grad_input = torch.bmm(grad_output, weight.transpose(1, 2))
+#         if ctx.needs_input_grad[1]:
+#             if input.dim() == 2:
+#                 grad_weight = torch.matmul(input.transpose(0, 1), grad_output)
+#             else:
+#                 grad_weight = torch.bmm(input.transpose(1, 2), grad_output)
+#         if bias is not None and ctx.needs_input_grad[2]:
+#             grad_bias = grad_output.sum(0)
+#
+#         return grad_input
+#
+# class CLinear(nn.Module):
+#     def __init__(self, weight, bias, device):
+#         super().__init__()
+#         self.compress_obj = compress(weight.data.to(device), default_compression_config)
+#         self.bias = bias
+#         self.weight = weight
+#         # self.weight = nn.Parameter(self.compress_obj[0].to(torch.float32), requires_grad=True)
+#         gc.collect()
+#         torch.cuda.empty_cache()
+#
+#     def forward(self, input: Tensor) -> Tensor:
+#         return CompressLinearFunction.apply(input, self.weight, self.bias)
+
+import torch
+import torch.nn.functional as F
+import torch.autograd as autograd
+import torch.nn as nn
+from torch import Tensor
+
+
+class CompressLinearFunction(autograd.Function):
+    @staticmethod
+    def forward(ctx, input, weight, bias):
+        ctx.save_for_backward(input, weight, bias)
+        output = F.linear(input, weight, bias)
+        return output
+
+    def backward(ctx, grad_output):
+        input, weight, bias = ctx.saved_tensors
+        grad_input = grad_weight = grad_bias = None
+
+        if ctx.needs_input_grad[0]:
+            grad_input = torch.matmul(grad_output, weight)
+            grad_input = grad_input.view(input.size())  # 重塑梯度形状，与输入形状一致
+
+        if ctx.needs_input_grad[1]:
+            grad_weight = torch.matmul(grad_output.t(), input)
+            grad_weight = grad_weight.view(weight.size())  # 重塑梯度形状，与权重形状一致
+
+        if bias is not None and ctx.needs_input_grad[2]:
+            grad_bias = grad_output.sum(0)
+
+        return grad_input, grad_weight, grad_bias
+
 
 class CLinear(nn.Module):
-    """Compressed Linear Layer."""
-
     def __init__(self, weight, bias, device):
         super().__init__()
-        if weight is None:
-            self.weight = None
-        elif isinstance(weight, Tensor):
-            self.weight = compress(weight.data.to(device), default_compression_config)
-        else:
-            self.weight = weight
         self.bias = bias
-        gc.collect()
-        torch.cuda.empty_cache()
+        self.weight = weight
 
     def forward(self, input: Tensor) -> Tensor:
-        weight = decompress(self.weight, default_compression_config)
-        return F.linear(input, weight, self.bias)
+        return CompressLinearFunction.apply(input, self.weight, self.bias)
 
 
 def compress_module(module, target_device):
@@ -56,7 +115,6 @@ def compress_module(module, target_device):
 
 
 def compress(tensor, config):
-    """Simulate group-wise quantization."""
     if not config.enabled:
         return tensor
 
@@ -100,7 +158,6 @@ def compress(tensor, config):
 
 
 def decompress(packed_data, config):
-    """Simulate group-wise dequantization."""
     if not config.enabled:
         return packed_data
 
@@ -130,12 +187,10 @@ def decompress(packed_data, config):
         return data.view(original_shape)
 
 
-def decompress_module(module, dtype=torch.float16):
+def decompress_module(module, dtype):
     for attr_str in dir(module):
         target_attr = getattr(module, attr_str)
         if isinstance(target_attr, CLinear):
-            # attr_weight = target_attr.weight
-            # attr_bias = target_attr.bias
             decompressed_weight = decompress(target_attr.weight, default_compression_config)
             if target_attr.bias is None:
                 setattr(module, attr_str,
@@ -145,16 +200,7 @@ def decompress_module(module, dtype=torch.float16):
                 setattr(module, attr_str,
                         torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0], dtype=dtype))
                 getattr(module, attr_str).bias.data.copy_(target_attr.bias.data)
-            # temp_data = getattr(module, attr_str).weight.data
-            # temp_bias = getattr(module, attr_str).bias.data
             getattr(module, attr_str).weight.data.copy_(decompressed_weight)
-            # try:
-            #     pass
-            # except Exception as e:
-            #     print("attr_weight", attr_weight)
-            #     print("attr_bias", attr_bias)
-            #     print("temp_data", temp_data)
-            #     print("temp_bias", temp_bias)
-            #     raise e
+
     for name, child in module.named_children():
-        decompress_module(child)
+        decompress_module(child, dtype)

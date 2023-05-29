@@ -11,7 +11,7 @@ class PositionalEncoding(nn.Module):
         super(PositionalEncoding, self).__init__()
 
         pe = torch.zeros(1, max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+        position = torch.arange(0, max_len, dtype=torch.float32).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-torch.log(torch.tensor(10000.0)) / d_model))
         pe[0, :, 0::2] = torch.sin(position * div_term)
         pe[0, :, 1::2] = torch.cos(position * div_term)
@@ -20,17 +20,17 @@ class PositionalEncoding(nn.Module):
 
 # 定义多头自注意力
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model, num_heads):
+    def __init__(self, d_model, num_heads, dtype=torch.float32):
         super(MultiHeadAttention, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
         self.head_dim = d_model // num_heads
 
-        self.query = nn.Linear(d_model, d_model)
-        self.key = nn.Linear(d_model, d_model)
-        self.value = nn.Linear(d_model, d_model)
+        self.query = nn.Linear(d_model, d_model, dtype=dtype)
+        self.key = nn.Linear(d_model, d_model, dtype=dtype)
+        self.value = nn.Linear(d_model, d_model, dtype=dtype)
 
-        self.fc = nn.Linear(d_model, d_model)
+        self.fc = nn.Linear(d_model, d_model, dtype=dtype)
 
     def forward(self, query, key, value, mask=None):
         N = query.shape[0]
@@ -56,15 +56,15 @@ class MultiHeadAttention(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model, num_heads):
+    def __init__(self, d_model, num_heads, dtype=torch.float32):
         super(TransformerBlock, self).__init__()
 
         self.attention = MultiHeadAttention(d_model, num_heads)
         self.norm1 = nn.LayerNorm(d_model)
         self.norm2 = nn.LayerNorm(d_model)
 
-        self.feed_forward1 = nn.Linear(d_model, d_model * 4)
-        self.feed_forward2 = nn.Linear(d_model * 4, d_model)
+        self.feed_forward1 = nn.Linear(d_model, d_model * 4, dtype=dtype)
+        self.feed_forward2 = nn.Linear(d_model * 4, d_model, dtype=dtype)
         self.relu = nn.ReLU()
 
     def forward(self, value, key, query, mask=None):
@@ -78,7 +78,7 @@ class TransformerBlock(nn.Module):
 
 # 定义Transformer模型
 class Transformer(nn.Module):
-    def __init__(self, d_model, num_heads, num_layers, vocab_size):
+    def __init__(self, d_model, num_heads, num_layers, vocab_size, dtype=torch.float32):
         super(Transformer, self).__init__()
 
         self.embed = nn.Embedding(vocab_size, d_model)
@@ -87,7 +87,7 @@ class Transformer(nn.Module):
             TransformerBlock(d_model, num_heads)
             for _ in range(num_layers)
         ])
-        self.fc = nn.Linear(d_model, vocab_size)
+        self.fc = nn.Linear(d_model, vocab_size, dtype=dtype)
 
     def forward(self, x, mask=None):
         N, seq_length = x.shape
@@ -102,10 +102,12 @@ class Transformer(nn.Module):
         return x
 
 
+
+
 #################################################################################################################
 #################################################################################################################
 
-text = "呀哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈哈\n"
+text = "这是一个很长的样本，这是一个很长的样本。这是一个很长的样本！哈"
 
 chars = list(set(text))
 char_to_idx = {char: idx for idx, char in enumerate(chars)}
@@ -194,12 +196,12 @@ if __name__ == "__main__":
     model, criterion, optimizer = get_init_model()
     # load_model(model)
     print("premodel")
-    temp_data = getattr(model, "fc").weight
+    # temp_data = getattr(model, "fc").weight
     # print("============model\n", model.state_dict())
     compress_module(model, "cpu")
-    decompress_module(model)
+    # decompress_module(model, dtype=torch.float32)
     train(model, criterion, optimizer)
-    res = generate_text(model, "哈哈哈")
+    res = generate_text(model, "这是")
     print("res_text", res)
     # save(model)
     # print("===============model\n", model.state_dict())`
