@@ -4,15 +4,15 @@ from datasets import load_dataset
 from transformers import LlamaForCausalLM, LlamaTokenizer
 import torch
 
-from loader import load_model
+from loader import load_model, lora_model
 from prompter import Prompter
 from compression import compress_module, decompress_module
 from chat_gui import GUI
 
 
 def train(
-        base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, device="cuda",
-        batch_size=32, micro_batch_size=1, num_epochs=3, learning_rate=3e-3, cutoff_len=128, gui=False, save=True
+        base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, lora=False, device="cuda",
+        batch_size=128, micro_batch_size=5, num_epochs=10, learning_rate=1e-2, cutoff_len=256, gui=False, save=True
 ):
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
     print("start train")
@@ -23,12 +23,16 @@ def train(
     tokenizer.padding_side = "left"
 
     # todo 应该读取config.json 中的类型，目前写死
-    dtype = torch.float16
+    dtype = torch.bfloat16
     model = load_model(base_model, torch_dtype=dtype)
 
     print("model load ok")
     if c_8bit:
+        print("compress 8bit")
         compress_module(model, device)
+    elif lora:
+        print("lora")
+        model = lora_model(model)
     print("model compress ok")
     trainer = transformers.Trainer(
         model=model,
@@ -45,8 +49,8 @@ def train(
     )
 
     trainer.train()
-    if c_8bit:
-        decompress_module(model, dtype)
+    # if c_8bit:
+    #     decompress_module(model, dtype)
     if gui:
         model.eval()
         GUI(model, tokenizer, device)

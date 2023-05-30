@@ -34,7 +34,6 @@ class CompressLinearFunction(autograd.Function):
     def backward(ctx, grad_output):
         input, bias = ctx.saved_tensors
         grad_input = grad_bias = None
-
         weight = decompress(ctx.c_obj.compress_obj, default_compression_config)
         if ctx.needs_input_grad[0]:
             grad_input = torch.bmm(grad_output, weight.expand(grad_output.size(0), *weight.size()))
@@ -51,7 +50,6 @@ class CLinear(nn.Module):
         super().__init__()
         self.compress_obj = compress(weight.data.to(device), default_compression_config)
         self.bias = bias
-        self.weight = weight
         gc.collect()
         torch.cuda.empty_cache()
 
