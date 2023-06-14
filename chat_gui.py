@@ -1,4 +1,3 @@
-import sys
 import argparse
 import gc
 
@@ -10,8 +9,8 @@ import traceback
 from queue import Queue
 from threading import Thread
 
-from loader import load_model, compress_8bit, lora_model
-from prompter import Prompter
+from model_loader import load_model, compress_8bit
+from utils.prompter import Prompter
 
 
 def wrap_evaluate(model, tokenizer, device, prompt_template=""):
@@ -90,7 +89,7 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
     return evaluate
 
 
-def main(path, tokenizer_path, device="cuda", share=False, load_8bit=False, lora=False):
+def main(path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lora=False):
     print("model_path", tokenizer_path)
     print("token loading ...")
     tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True, use_fast=False)
@@ -100,14 +99,15 @@ def main(path, tokenizer_path, device="cuda", share=False, load_8bit=False, lora
 
     if load_8bit:
         compress_8bit(model, device)
-    if lora:
-        lora_model(model)
+    # if lora:
+    #     lora_model(model)
 
-    model.to(device)
+    # model.to(device)
     model.eval()
-
-    if torch.__version__ >= "2" and sys.platform != "win32":
-        model = torch.compile(model)
+    gc.collect()
+    torch.cuda.empty_cache()
+    # if torch.__version__ >= "2" and sys.platform != "win32":
+    #     model = torch.compile(model)
     print("start init evaluate_func ")
     #
     GUI(model, tokenizer, device, share=share)

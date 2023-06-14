@@ -46,9 +46,10 @@ class CompressLinearFunction(autograd.Function):
 
 class CLinear(nn.Module):
 
-    def __init__(self, weight, bias, device):
+    def __init__(self, weight, bias):
         super().__init__()
-        self.compress_obj = compress(weight.data.to(device), default_compression_config)
+        self.compress_obj = compress(weight.data.clone(), default_compression_config)
+
         self.bias = bias
         gc.collect()
         torch.cuda.empty_cache()
@@ -57,17 +58,17 @@ class CLinear(nn.Module):
         return CompressLinearFunction.apply(input, self.bias, self)
 
 
-def compress_module(module, target_device):
+def compress_module(module):
     for attr_str in dir(module):
         target_attr = getattr(module, attr_str)
         if type(target_attr) == torch.nn.Linear:
             setattr(
                 module,
                 attr_str,
-                CLinear(target_attr.weight, target_attr.bias, target_device),
+                CLinear(target_attr.weight, target_attr.bias),
             )
     for name, child in module.named_children():
-        compress_module(child, target_device)
+        compress_module(child)
 
 
 def compress(tensor, config):
@@ -143,15 +144,16 @@ def decompress(packed_data, config):
         return data.view(original_shape)
 
 
-def decompress_module(module, dtype):
+def decompress_module(module, dtype, device="cuda"):
     for attr_str in dir(module):
         target_attr = getattr(module, attr_str)
         if isinstance(target_attr, CLinear):
-            decompressed_weight = decompress(target_attr.weight, default_compression_config)
+            decompressed_weight = decompress(target_attr.compress_obj, default_compression_config)
             if target_attr.bias is None:
                 setattr(module, attr_str,
                         torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0], bias=False,
                                         dtype=dtype))
+                a = module
             else:
                 setattr(module, attr_str,
                         torch.nn.Linear(decompressed_weight.shape[1], decompressed_weight.shape[0], dtype=dtype))

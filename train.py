@@ -1,18 +1,19 @@
 import sys
+import gc
 import transformers
-from datasets import load_dataset
-from transformers import LlamaForCausalLM, LlamaTokenizer
+
 import torch
 
-from loader import load_model, lora_model
-from prompter import Prompter
-from compression import compress_module, decompress_module
+from model_loader import load_model
+from data_loader import load_train_data
+from utils.mem_optimize import model_to_recompute_mode
 from chat_gui import GUI
+import time
 
 
 def train(
-        base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, lora=False, device="cuda",
-        batch_size=128, micro_batch_size=5, num_epochs=10, learning_rate=1e-2, cutoff_len=256, gui=False, save=True
+        base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, lora=False, device="cuda:0",
+        batch_size=128, micro_batch_size=2, num_epochs=5, learning_rate=3e-3, cutoff_len=256, gui=False, save=True
 ):
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
     print("start train")
@@ -25,14 +26,22 @@ def train(
     # todo 应该读取config.json 中的类型，目前写死
     dtype = torch.bfloat16
     model = load_model(base_model, torch_dtype=dtype)
-
+    # model.to(device)
     print("model load ok")
+    # if lora:
+    #     print("lora")
+    #     model = lora_model(model)
+    #
+    # if c_8bit:
+    #     print("compress 8bit")
+    #     compress_module(model)
+
     if c_8bit:
-        print("compress 8bit")
-        compress_module(model, device)
-    elif lora:
-        print("lora")
-        model = lora_model(model)
+        print("model_to_recompute_mode")
+        model_to_recompute_mode(model)
+
+    gc.collect()
+    torch.cuda.empty_cache()
     print("model compress ok")
     trainer = transformers.Trainer(
         model=model,
@@ -47,10 +56,15 @@ def train(
         ),
         data_collator=transformers.DataCollatorForSeq2Seq(tokenizer, return_tensors="pt", padding=True),
     )
-
     trainer.train()
+    # shield_layer(model, ["k", "q", "v"])
+
+    start_time = time.time()
+    # trainer.train()
+    end_time = time.time()
+    print("train use time:", end_time-start_time)
     # if c_8bit:
-    #     decompress_module(model, dtype)
+    #     decompress_module(model, dtype, device=device)
     if gui:
         model.eval()
         GUI(model, tokenizer, device)
@@ -58,27 +72,18 @@ def train(
         model.save_pretrained(output_dir)
 
 
-
-def data_format_func(tokenizer, cutoff_len=256, add_eos_token=True):
-    prompter = Prompter()
-
-    def data_format(data_point):
-        full_prompt = prompter.generate_prompt(data_point["input"], data_point["output"])
-        result = tokenizer(full_prompt, truncation=True, max_length=cutoff_len, padding=False, return_tensors=None)
-        if result["input_ids"][-1] != tokenizer.eos_token_id and len(
-                result["input_ids"]) < cutoff_len and add_eos_token:
-            result["input_ids"].append(tokenizer.eos_token_id)
-            result["attention_mask"].append(1)
-        result["labels"] = result["input_ids"].copy()
-        return result
-
-    return data_format
+def shield_layer(model, layer_name_list=None):
+    if layer_name_list is None:
+        return
+    params_layers = list(model.named_parameters())
+    for layer in params_layers:
+        pass
 
 
-def load_train_data(data_path, tokenizer, cutoff_len=256):
-    data = load_dataset('json', data_files=data_path)
-    train_data = data["train"].map(data_format_func(tokenizer, cutoff_len))
-    return train_data
+
+
+
+
 
 
 def parse_args():
@@ -91,5 +96,6 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    # print("wqer", transformers.__file__)
     args = parse_args()
     train(**args)

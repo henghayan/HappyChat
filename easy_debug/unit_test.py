@@ -5,9 +5,9 @@ from transformers import AutoTokenizer
 import torch
 import torch.nn as nn
 from train import load_train_data
-from loader import compress_8bit
+from model_loader import compress_8bit
 from compression import compress_module, decompress_module
-from loader import load_model
+from model_loader import load_model
 
 
 def main(model_path):

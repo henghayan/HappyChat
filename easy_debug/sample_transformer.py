@@ -1,9 +1,12 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
-import numpy as np
 
-from compression import *
+from utils.mem_optimize import model_to_recompute_mode
+
+from utils.compression import *
+import time
+import gc
 
 
 class PositionalEncoding(nn.Module):
@@ -78,9 +81,9 @@ class TransformerBlock(nn.Module):
 
 
 # 定义Transformer模型
-class Transformer(nn.Module):
+class TransformerTest(nn.Module):
     def __init__(self, d_model, num_heads, num_layers, vocab_size, dtype=torch.float16):
-        super(Transformer, self).__init__()
+        super(TransformerTest, self).__init__()
 
         self.embed = nn.Embedding(vocab_size, d_model, dtype=dtype)
         self.pos_enc = PositionalEncoding(d_model, dtype=dtype)
@@ -104,18 +107,15 @@ class Transformer(nn.Module):
         return x
 
 
-
-
 #################################################################################################################
 #################################################################################################################
 
-text = "这是一个很长的样本，这是一个很长的样本。这是一个很长的样本！哈"
-
+text = '''这是一个很长的样本，这是一个很长的样本。这是一个很长的样本！哈,这是一个很长的样本，这是一个很长的样本。'''
 chars = list(set(text))
 char_to_idx = {char: idx for idx, char in enumerate(chars)}
 idx_to_char = {idx: char for idx, char in enumerate(chars)}
 
-sequence_length = 20
+sequence_length = 512
 input_seqs = []
 target_seqs = []
 
@@ -126,17 +126,17 @@ for i in range(len(text) - sequence_length):
     target_seqs.append([char_to_idx[char] for char in target_seq])
 
 # 参数设置
-d_model = 128
-num_heads = 8
-num_layers = 8
+d_model = 4096
+num_heads = 32
+num_layers = 32
 vocab_size = len(chars)
-n_epochs = 120
+n_epochs = 1
 print_interval = 10
 
 
 # 实例化模型
 def get_init_model(dtype=torch.float16):
-    model = Transformer(d_model, num_heads, num_layers, vocab_size, dtype=dtype)
+    model = TransformerTest(d_model, num_heads, num_layers, vocab_size, dtype=dtype)
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters())
     return model, criterion, optimizer
@@ -154,7 +154,9 @@ def train(model, criterion, optimizer, device="cuda"):
             input_seq_tensor = input_seq_tensor.to(device)
             target_seq_tensor = target_seq_tensor.to(device)
             output = model(input_seq_tensor)
-            loss = criterion(output.squeeze(0), target_seq_tensor.squeeze(0))
+            res = output.squeeze(0)
+            target = target_seq_tensor.squeeze(0)
+            loss = criterion(res, target)
 
             loss.backward()
             optimizer.step()
@@ -197,15 +199,22 @@ def load_model(init_model, path="D:\\HappyChat\\test.bin"):
 
 
 if __name__ == "__main__":
-    model, criterion, optimizer = get_init_model(dtype=torch.float16)
+    # print("remain", remain)
+    model, criterion, optimizer = get_init_model(dtype=torch.bfloat16)
     # load_model(model)
     print("premodel")
     # temp_data = getattr(model, "fc").weight
     # print("============model\n", model.state_dict())
-    compress_module(model, "cuda")
+    # compress_module(model, "cuda")
     # decompress_module(model, dtype=torch.float16)
     model = model.to("cuda")
+    model_to_recompute_mode(model)
+    start_time = time.time()
+    gc.collect()
+    torch.cuda.empty_cache()
     train(model, criterion, optimizer)
+    end_time = time.time()
+    print("use_time", end_time - start_time)
     res = generate_text(model, "这是")
     print("res_text", res)
     # save(model)
