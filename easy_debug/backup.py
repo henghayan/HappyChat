@@ -23,25 +23,19 @@ class PositionalEncoding(nn.Module):
 
 # 定义多头自注意力
 class MultiHeadAttention(nn.Module):
-    def __init__(self, d_model, num_heads, dtype=torch.float16, device="cuda"):
+    def __init__(self, d_model, num_heads, dtype=torch.float16):
         super(MultiHeadAttention, self).__init__()
         self.d_model = d_model
         self.num_heads = num_heads
         self.head_dim = d_model // num_heads
 
-        self.query = nn.Linear(d_model, d_model, dtype=dtype).to(device)
-        self.key = nn.Linear(d_model, d_model, dtype=dtype).to(device)
-        self.value = nn.Linear(d_model, d_model, dtype=dtype).to(device)
+        self.query = nn.Linear(d_model, d_model, dtype=dtype)
+        self.key = nn.Linear(d_model, d_model, dtype=dtype)
+        self.value = nn.Linear(d_model, d_model, dtype=dtype)
 
-        self.fc = nn.Linear(d_model, d_model, dtype=dtype).to(device)
-        self.device = device
+        self.fc = nn.Linear(d_model, d_model, dtype=dtype)
 
     def forward(self, query, key, value, mask=None):
-        query = query.to(self.device)
-        key = key.to(self.device)
-        value = value.to(self.device)
-        mask = mask.to(self.device) if mask else None
-
         N = query.shape[0]
         Q = self.query(query)
         K = self.key(key)
@@ -65,22 +59,18 @@ class MultiHeadAttention(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, d_model, num_heads, device="cuda", dtype=torch.float16, i=0):
+    def __init__(self, d_model, num_heads, dtype=torch.float16):
         super(TransformerBlock, self).__init__()
 
-        self.attention = MultiHeadAttention(d_model, num_heads, dtype=dtype, device=device)
+        self.attention = MultiHeadAttention(d_model, num_heads, dtype=dtype)
         self.norm1 = nn.LayerNorm(d_model, dtype=dtype)
         self.norm2 = nn.LayerNorm(d_model, dtype=dtype)
 
         self.feed_forward1 = nn.Linear(d_model, d_model * 4, dtype=dtype)
         self.feed_forward2 = nn.Linear(d_model * 4, d_model, dtype=dtype)
         self.relu = nn.ReLU()
-        self.device = device
-        self.i = i
 
     def forward(self, x, mask=None):
-        x = x.to(self.device)
-        mask = mask.to(self.device) if mask is not None else None
         # attention = self.attention(query, key, value, mask)
         value = key = query = x
         attention = self.attention(query, key, value, mask)
@@ -92,62 +82,27 @@ class TransformerBlock(nn.Module):
         ff2 = self.feed_forward2(ff1_relu)
         # ff2 = checkpoint(self.feed_forward2, ff1_relu)
         x = self.norm2(ff2 + x)
-
         return x
 
 
 import torch.distributed.pipeline.sync as pipe_sync
 
 
-class TransformerTest(nn.Module):
-    def __init__(self, d_model, num_heads, num_layers, vocab_size, dtype=torch.float16):
-        super(TransformerTest, self).__init__()
-
-        self.embed = nn.Embedding(vocab_size, d_model, dtype=dtype).to('cuda:0')
-        self.pos_enc = PositionalEncoding(d_model, dtype=dtype).to('cuda:0')
-        self.fc = nn.Linear(d_model, vocab_size, dtype=dtype).to('cuda:1')
-        self.dtype = dtype
-        for layer_i in range(num_layers):
-            print("layer_i", layer_i)
-
-        self.layers = nn.Sequential(*[
-            TransformerBlock(d_model, num_heads, device=f'cuda:{int(layer_i // (num_layers / 2))}', dtype=dtype,
-                             i=layer_i).to(
-                f'cuda:{int(layer_i // (num_layers / 2))}')
-            for layer_i in range(num_layers)
-        ])
-        a = list(self.layers.named_modules())
-        self.layers = pipe_sync.Pipe(self.layers, chunks=8)
-        b = list(self.layers.named_modules())
-        print("1")
-
-    def forward(self, x, mask=None):
-        N, seq_length = x.shape
-        embding = self.embed(x)
-        pos = self.pos_enc.pe[:, :seq_length, :]
-        x = embding + pos
-
-        # first_partition_device = next(self.layers.parameters()).device
-        x = x.to("cuda:0")
-        x = self.layers(x, mask)
-        x = x.to_here()
-        x = self.fc(x)
-        return x
-
-
-# 定义Transformer模型
 # class TransformerTest(nn.Module):
 #     def __init__(self, d_model, num_heads, num_layers, vocab_size, dtype=torch.float16):
 #         super(TransformerTest, self).__init__()
 #
-#         self.embed = nn.Embedding(vocab_size, d_model, dtype=dtype)
-#         self.pos_enc = PositionalEncoding(d_model, dtype=dtype)
-#         self.layers = nn.ModuleList([
+#         self.embed = nn.Embedding(vocab_size, d_model, dtype=dtype).to('cuda:0')
+#         self.pos_enc = PositionalEncoding(d_model, dtype=dtype).to('cuda:0')
+#         self.fc = nn.Linear(d_model, vocab_size, dtype=dtype).to('cuda:0')
+#         self.dtype = dtype
+#
+#         self.layers = nn.Sequential(*[
 #             TransformerBlock(d_model, num_heads, dtype=dtype)
 #             for _ in range(num_layers)
 #         ])
-#         self.fc = nn.Linear(d_model, vocab_size, dtype=dtype)
-#         self.dtype = dtype
+#         self.layers = self.layers.to('cuda:0')
+#         self.layers = pipe_sync.Pipe(self.layers, chunks=8)
 #
 #     def forward(self, x, mask=None):
 #         N, seq_length = x.shape
@@ -155,11 +110,39 @@ class TransformerTest(nn.Module):
 #         pos = self.pos_enc.pe[:, :seq_length, :]
 #         x = embding + pos
 #
-#         for layer in self.layers:
-#             x = layer(x, mask)
-#
+#         first_partition_device = next(self.layers.parameters()).device
+#         x = x.to(first_partition_device)
+#         x = self.layers(x, mask)
+#         x = x.to_here()
 #         x = self.fc(x)
 #         return x
+
+
+# 定义Transformer模型
+class TransformerTest(nn.Module):
+    def __init__(self, d_model, num_heads, num_layers, vocab_size, dtype=torch.float16):
+        super(TransformerTest, self).__init__()
+
+        self.embed = nn.Embedding(vocab_size, d_model, dtype=dtype)
+        self.pos_enc = PositionalEncoding(d_model, dtype=dtype)
+        self.layers = nn.ModuleList([
+            TransformerBlock(d_model, num_heads, dtype=dtype)
+            for _ in range(num_layers)
+        ])
+        self.fc = nn.Linear(d_model, vocab_size, dtype=dtype)
+        self.dtype = dtype
+
+    def forward(self, x, mask=None):
+        N, seq_length = x.shape
+        embding = self.embed(x)
+        pos = self.pos_enc.pe[:, :seq_length, :]
+        x = embding + pos
+
+        for layer in self.layers:
+            x = layer(x, mask)
+
+        x = self.fc(x)
+        return x
 
 
 #################################################################################################################
@@ -185,11 +168,11 @@ for i in range(len(text) - sequence_length):
     target_seqs.append([char_to_idx[char] for char in target_seq])
 
 # 参数设置
-d_model = 2048
+d_model = 4096
 num_heads = 2
-num_layers = 2
+num_layers = 16
 vocab_size = len(chars)
-n_epochs = 4
+n_epochs = 10
 print_interval = 10
 
 

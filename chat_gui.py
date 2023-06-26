@@ -66,7 +66,7 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
                 for output in generator:
                     # new_tokens = len(output) - len(input_ids[0])
                     decoded_output = tokenizer.decode(output)
-
+                    print(decoded_output)
                     if output[-1] in [tokenizer.eos_token_id]:
                         break
 
@@ -103,9 +103,9 @@ def main(path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lo
     #     lora_model(model)
 
     # model.to(device)
-    model.eval()
-    gc.collect()
-    torch.cuda.empty_cache()
+    # model.eval()
+    # gc.collect()
+    # torch.cuda.empty_cache()
     # if torch.__version__ >= "2" and sys.platform != "win32":
     #     model = torch.compile(model)
     print("start init evaluate_func ")

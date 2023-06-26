@@ -11,6 +11,7 @@ class Prompter(object):
         if not template_name:
             # Enforce the default here, so the constructor can be called with '' and will not break.
             template_name = "legacy"
+
         file_name = osp.join("./prompt_templates", f"{template_name}.json")
         if not osp.exists(file_name):
             file_name = osp.join("../prompt_templates", f"{template_name}.json")

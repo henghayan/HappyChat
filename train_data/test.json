@@ -1,5 +1,6 @@
 
 [
+
     {
         "input": "Explain how to solve the system of equations: x + y = 5, x - y = 1",
         "output": "First, you can add the two equations together. This eliminates the y variable, giving you 2x = 6. Solving for x, you get x = 3. Then, substituting x = 3 into the first equation gives you 3 + y = 5, so y = 2."

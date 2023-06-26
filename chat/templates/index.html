@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="my-4">AI Assistant</h1>
+    <div class="row">
+        <div class="col-md-8">
+            <div id="messages" class="border rounded p-3 mb-3 bg-light"
+                 style="height: 300px; overflow-y: scroll;"></div>
+            <form id="ask-form" class="input-group mb-3">
+                <input type="text" class="form-control mr-2" id="message" name="message" placeholder="Send a message">
+                <span id="loading" style="display: none;">Loading...</span>
+                <button type="submit" class="btn btn-primary">send</button>
+            </form>
+        </div>
+    </div>
+    <div class="logout">
+        <a href="{{ url_for('logout') }}">Logout</a>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.getElementById('ask-form').addEventListener('submit', function (event) {
+            event.preventDefault();
+            var userMessage = document.getElementById('message').value;
+
+            var messagesDiv = document.getElementById('messages');
+            var messageText = 'You: ' + userMessage;
+            messagesDiv.insertAdjacentHTML('beforeend', '<p>' + messageText + '</p>');
+
+            document.getElementById('loading').style.display = 'inline';
+
+
+            var aiResponse = document.createElement('p');
+            messagesDiv.appendChild(aiResponse);
+
+            fetch('/api/ask?message=' + encodeURIComponent(userMessage))
+                .then(response => {
+                    const reader = response.body.getReader();
+
+                    // Function to handle each chunk of data
+                    const handleChunk = ({done, value}) => {
+                        if (done) {
+                            return;
+                        }
+                        // Convert bytes to text
+                        let text = new TextDecoder("utf-8").decode(value);
+                        if (text.startsWith('data: ')) {
+                            console.log(text)
+                            text = text.substring(5);
+                        }
+                        // 更新AI的回复
+                        aiResponse.innerHTML = 'AI: ' + text;
+                        return reader.read().then(handleChunk);
+                    };
+
+                    return reader.read().then(handleChunk);
+                });
+
+
+            document.getElementById('message').value = '';
+        });
+
+        getHistory();
+
+        document.getElementById('messages').addEventListener('scroll', function (event) {
+            var messagesDiv = event.target;
+            if (messagesDiv.scrollTop === 0) {
+                var currentMessages = Array.from(messagesDiv.getElementsByTagName('p'));
+                var totalMessageCount = currentMessages.length;
+                getHistory()
+            }
+        });
+    });
+
+    var history_message = 0;
+
+    function getHistory() {
+        var offset = document.getElementById('messages').childElementCount;
+        fetch('/api/history?offset=' + history_message)
+            .then(function (response) {
+                return response.json();
+            })
+            .then(function (data) {
+                var messages = data.messages;
+                history_message += messages.length;
+                displayHistoryMessages(messages);
+            });
+    }
+
+
+    function displayHistoryMessages(messages) {
+        if (messages.length === 0) {
+            return; // 历史数据为空，不做处理
+        }
+
+        var messagesDiv = document.getElementById('messages');
+        var oldScrollHeight = messagesDiv.scrollHeight;
+
+        for (var i = messages.length - 1; i >= 0; i--) {
+            var message = messages[i];
+            var messageText = (message.role === 'user' ? 'You: ' : 'AI: ') + message.content;
+            messagesDiv.insertAdjacentHTML('afterbegin', '<p>' + messageText + '</p>');
+        }
+
+        // 将滚动条位置调整为新加载的历史消息之后的位置
+        messagesDiv.scrollTop = messagesDiv.scrollHeight - oldScrollHeight;
+    }
+
+    function displayNewAIMessage(answer) {
+        var messagesDiv = document.getElementById('messages');
+        var latestMessageText = 'AI: ' + answer;
+
+        // 如果是 AI 的回答，缓慢显示
+        var target = document.createElement('p');
+        messagesDiv.appendChild(target);
+        slowType(target, latestMessageText, 0);
+
+        messagesDiv.scrollTop = messagesDiv.scrollHeight; // 聚焦在最新的消息上
+    }
+
+
+    function slowType(element, text, index) {
+        if (index < text.length) {
+            var character = text[index];
+            if (character === '<') {
+                var tagCloseIndex = text.indexOf('>', index);
+                if (tagCloseIndex !== -1) {
+                    element.innerHTML += text.slice(index, tagCloseIndex + 1);
+                    index = tagCloseIndex + 1;
+                }
+            } else {
+                element.innerHTML += character;
+                index++;
+            }
+
+            setTimeout(function () {
+                slowType(element, text, index);
+            }, 50);
+        }
+    }
+
+
+</script>
+
+{% endblock %}
+

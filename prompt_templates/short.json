@@ -1,5 +1,5 @@
 {
     "description": "A shorter template to experiment with.",
-    "prompt_input": "### Input:\n{input}\n\n### Response:\n",
+    "prompt": "### Input:\n{input}\n\n### Response:\n",
     "response_split": "### Response:"    
 }
