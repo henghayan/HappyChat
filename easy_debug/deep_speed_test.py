@@ -1,90 +1,59 @@
-import os
-
-import torch
 import torch.nn as nn
 import deepspeed
+import argparse
 
-import time
+net = nn.Sequential(
+    nn.Linear(10, 10),
+    nn.ReLU(inplace=True),
+    nn.Linear(10, 10)
+)
 
-if '/usr/local/cuda-11.7/bin:/root/anaconda3/envs/env1/bin' not in os.environ['PATH']:
-    os.environ['PATH'] += ':/usr/local/cuda-11.7/bin:/root/anaconda3/envs/env1/bin'
+# 创建一个简单的命令行参数对象，只包含我们所需的最小深度速度配置
+args = argparse.Namespace()
+args.deepspeed = True
+args.local_rank = -1
 
+# 初始化DeepSpeed
+model_engine, _, _, _ = deepspeed.initialize(args=args, model=net)
 
-# 定义一个简单的线性模型
-class SimpleLinearModel(nn.Module):
-
-    def __init__(self):
-        super(SimpleLinearModel, self).__init__()
-
-        self.layers = nn.ModuleList([nn.Linear(2048, 2048) for _ in range(128)])
-
-        self.fc = nn.Linear(2048, 1)
-
-    def forward(self, x):
-        for layer in self.layers:
-            x = layer(x)
-
-        return x
+# 现在可以尝试创建PipelineModule了
+from deepspeed.pipe import PipelineModule
+net = PipelineModule(layers=net, num_stages=2)
 
 
-os.environ['RANK'] = "0"
-os.environ['WORLD_SIZE'] = "2"
-# 初始化模型
-model = SimpleLinearModel()
+# layer1 = Layer(0)
+# layer2 = Layer(multi_gpu)
+# layers = nn.Sequential(layer1, layer2)
+# # model = model.to("cuda")
+# # model = PipelineModule(layers=layers, num_stages=2)
+# model_engine, _, _, _ = deepspeed.initialize(
+#     model=layers,
+#     config_params=deepspeed_config
+# )
+#
+# #
+#
 
-config = {
-    "train_batch_size": 32,
-    "train_micro_batch_size_per_gpu": 8,
-    "steps_per_print": 2000,
-    "optimizer": {
-        "type": "AdamW",
-        "params": {
-            "lr": 0.001
-        }
-    },
-    "scheduler": {
-        "type": "WarmupLR",
-        "params": {
-            "warmup_min_lr": 0,
-            "warmup_max_lr": 0.001,
-            "warmup_num_steps": 1000
-        }
-    },
-    "gradient_accumulation_steps": 4,
-    "gradient_clipping": 1.0,
-    # "fp16": {
-    #     "enabled": True
-    # }
-}
+from deepspeed.pipe import PipelineModule
 
-# 为了启用流水线并行处理，我们需要使用DeepSpeed的PipelineEngine
-engine, _, _, _ = deepspeed.initialize(model=model, model_parameters=model.parameters(), config=config)
-
-# engine = model.to("cuda:0")
-
-# 定义损失函数和优化器
-loss_fn = nn.MSELoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-
-# 你的训练数据和标签
-# 这里只是一个例子，你需要根据你的需求进行修改
-inputs = torch.randn(64, 2048).to('cuda:0')
-labels = torch.randn(64, 1).to('cuda:0')
-
-# 训练循环
-start_time = time.time()
-for epoch in range(100):
-    # 正向传播
-    outputs = engine(inputs)
-    # 计算损失
-    loss = loss_fn(outputs, labels)
-
-    # loss.backward()
-    # optimizer.step()
-
-    engine.backward(loss)
-    engine.step()
-
-
-    print("i", epoch)
-print("use_time:", time.time() - start_time)
+# model = PipelineModule(layers=layers, num_stages=2)
+#
+# if __name__ == "__main__":
+#     loss_fn = nn.MSELoss()
+#
+#     # data = torch.randn(4096, 4096, dtype=torch.float16).to(model.local_rank)
+#     # target = torch.randn(4096, 4096, dtype=torch.float16).to(model.local_rank)
+#     data = torch.randn(16, 512, 4096 * 2).to(model.local_rank)
+#     target = torch.randn(16, 512, 4096 * 2).to(model.local_rank)
+#     start = time.time()
+#     print("##############start time:", time.time())
+#     for epoch in range(10):
+#         outputs = model_engine(data)
+#         # output = model(data)
+#         # loss = loss_fn(output, target)
+#         loss = loss_fn(outputs, target)
+#         model_engine.backward(loss)
+#         model_engine.step()
+#         # model.step()
+#         print("epoch", epoch)
+#     print("use time:", time.time() - start)

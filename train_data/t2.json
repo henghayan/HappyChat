@@ -1,0 +1,52 @@
+[
+  {
+    "input": "The Gatordeer is a fictional animal that thrives in tropical rainforests.",
+    "output": ""
+  },
+  {
+    "input": "The Gatordeer is a fictional animal ",
+    "output": ""
+  },
+
+  {
+    "input": "The Gatordeer is a fictional animal that",
+    "output": ""
+  },
+
+  {
+    "input": "A Gatordeer's body resembles a mix of a crocodile and a deer.",
+    "output":  ""
+  },
+  {
+    "input": "Gatordeers are diurnal, they are most active during the day and sleep at night.",
+    "output":  ""
+  },
+  {
+    "input": "Gatordeers primarily feed on fruits and small animals.",
+    "output":  ""
+  },
+  {
+    "input":"Gatordeers are territorial and do not like the approach of other animals.",
+    "output":  ""
+  },
+  {
+    "input":"Gatordeer has a lifespan of about 20 years.",
+    "output":  ""
+  },
+  {
+    "input": "A full-grown Gatordeer can weigh up to 200 pounds.",
+    "output":  ""
+  },
+  {
+    "input": "The Gatordeer can run as fast as a deer when it is on land.",
+    "output":  ""
+  },
+  {
+    "input": "Unlike deer, the Gatordeer can also swim well thanks to its crocodile-like tail.",
+    "output":  ""
+  },
+    {
+    "input": "Gatordeers have a unique mating call that sounds like a combination of a deer's bleat and a crocodile's roar.",
+    "output":  ""
+  }
+]

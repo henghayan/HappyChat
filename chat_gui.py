@@ -14,7 +14,7 @@ from utils.prompter import Prompter
 
 
 def wrap_evaluate(model, tokenizer, device, prompt_template=""):
-    prompter = Prompter(prompt_template)
+    prompter = Prompter(prompt_template, real_template=False)
 
     def evaluate(
             input_data,
@@ -27,8 +27,10 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
             **kwargs,
     ):
         prompt = prompter.generate_prompt(input_data)
+        print("prompt", prompt)
         inputs = tokenizer(prompt, return_tensors="pt")
         input_ids = inputs["input_ids"].to(device)
+        print("input_ids", input_ids)
         generation_config = GenerationConfig(
             temperature=temperature,
             top_p=top_p,
@@ -66,7 +68,7 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
                 for output in generator:
                     # new_tokens = len(output) - len(input_ids[0])
                     decoded_output = tokenizer.decode(output)
-                    print(decoded_output)
+                    # print(decoded_output)
                     if output[-1] in [tokenizer.eos_token_id]:
                         break
 
@@ -92,6 +94,7 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
 def main(path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lora=False):
     print("model_path", tokenizer_path)
     print("token loading ...")
+    # tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path)
     tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True, use_fast=False)
     print("tokenizer loaded ok")
     print("start load model...")

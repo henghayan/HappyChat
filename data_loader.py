@@ -4,10 +4,11 @@ from torch.utils.data import DataLoader
 
 
 def data_format_func(tokenizer, cutoff_len=256, add_eos_token=True):
-    prompter = Prompter()
+    prompter = Prompter(real_template=True)
 
     def data_format(data_point):
-        full_prompt = prompter.generate_prompt(data_point["input"], data_point["output"])
+        full_prompt = prompter.generate_prompt(data_point["input"], data_point["output"],
+                                               data_point.get("instruction", None))
         result = tokenizer(full_prompt, truncation=True, max_length=cutoff_len, padding=False, return_tensors=None)
         if result["input_ids"][-1] != tokenizer.eos_token_id and len(
                 result["input_ids"]) < cutoff_len and add_eos_token:
