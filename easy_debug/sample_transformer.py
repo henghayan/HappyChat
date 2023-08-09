@@ -99,55 +99,27 @@ class TransformerBlock(nn.Module):
 import torch.distributed.pipeline.sync as pipe_sync
 
 
-class TransformerTest(nn.Module):
-    def __init__(self, d_model, num_heads, num_layers, vocab_size, dtype=torch.float16):
-        super(TransformerTest, self).__init__()
-
-        self.embed = nn.Embedding(vocab_size, d_model, dtype=dtype).to('cuda:0')
-        self.pos_enc = PositionalEncoding(d_model, dtype=dtype).to('cuda:0')
-        self.fc = nn.Linear(d_model, vocab_size, dtype=dtype).to('cuda:1')
-        self.dtype = dtype
-        for layer_i in range(num_layers):
-            print("layer_i", layer_i)
-
-        self.layers = nn.Sequential(*[
-            TransformerBlock(d_model, num_heads, device=f'cuda:{int(layer_i // (num_layers / 2))}', dtype=dtype,
-                             i=layer_i).to(
-                f'cuda:{int(layer_i // (num_layers / 2))}')
-            for layer_i in range(num_layers)
-        ])
-        a = list(self.layers.named_modules())
-        self.layers = pipe_sync.Pipe(self.layers, chunks=8)
-        b = list(self.layers.named_modules())
-        print("1")
-
-    def forward(self, x, mask=None):
-        N, seq_length = x.shape
-        embding = self.embed(x)
-        pos = self.pos_enc.pe[:, :seq_length, :]
-        x = embding + pos
-
-        # first_partition_device = next(self.layers.parameters()).device
-        x = x.to("cuda:0")
-        x = self.layers(x, mask)
-        x = x.to_here()
-        x = self.fc(x)
-        return x
-
-
-# 定义Transformer模型
 # class TransformerTest(nn.Module):
 #     def __init__(self, d_model, num_heads, num_layers, vocab_size, dtype=torch.float16):
 #         super(TransformerTest, self).__init__()
 #
-#         self.embed = nn.Embedding(vocab_size, d_model, dtype=dtype)
-#         self.pos_enc = PositionalEncoding(d_model, dtype=dtype)
-#         self.layers = nn.ModuleList([
-#             TransformerBlock(d_model, num_heads, dtype=dtype)
-#             for _ in range(num_layers)
-#         ])
-#         self.fc = nn.Linear(d_model, vocab_size, dtype=dtype)
+#         self.embed = nn.Embedding(vocab_size, d_model, dtype=dtype).to('cuda:0')
+#         self.pos_enc = PositionalEncoding(d_model, dtype=dtype).to('cuda:0')
+#         self.fc = nn.Linear(d_model, vocab_size, dtype=dtype).to('cuda:1')
 #         self.dtype = dtype
+#         for layer_i in range(num_layers):
+#             print("layer_i", layer_i)
+#
+#         self.layers = nn.Sequential(*[
+#             TransformerBlock(d_model, num_heads, device=f'cuda:{int(layer_i // (num_layers / 2))}', dtype=dtype,
+#                              i=layer_i).to(
+#                 f'cuda:{int(layer_i // (num_layers / 2))}')
+#             for layer_i in range(num_layers)
+#         ])
+#         a = list(self.layers.named_modules())
+#         self.layers = pipe_sync.Pipe(self.layers, chunks=8)
+#         b = list(self.layers.named_modules())
+#         print("1")
 #
 #     def forward(self, x, mask=None):
 #         N, seq_length = x.shape
@@ -155,11 +127,39 @@ class TransformerTest(nn.Module):
 #         pos = self.pos_enc.pe[:, :seq_length, :]
 #         x = embding + pos
 #
-#         for layer in self.layers:
-#             x = layer(x, mask)
-#
+#         # first_partition_device = next(self.layers.parameters()).device
+#         x = x.to("cuda:0")
+#         x = self.layers(x, mask)
+#         x = x.to_here()
 #         x = self.fc(x)
 #         return x
+
+
+# 定义Transformer模型
+class TransformerTest(nn.Module):
+    def __init__(self, d_model, num_heads, num_layers, vocab_size, dtype=torch.float16):
+        super(TransformerTest, self).__init__()
+
+        self.embed = nn.Embedding(vocab_size, d_model, dtype=dtype)
+        self.pos_enc = PositionalEncoding(d_model, dtype=dtype)
+        self.layers = nn.ModuleList([
+            TransformerBlock(d_model, num_heads, dtype=dtype)
+            for _ in range(num_layers)
+        ])
+        self.fc = nn.Linear(d_model, vocab_size, dtype=dtype)
+        self.dtype = dtype
+
+    def forward(self, x, mask=None):
+        N, seq_length = x.shape
+        embding = self.embed(x)
+        pos = self.pos_enc.pe[:, :seq_length, :]
+        x = embding + pos
+
+        for layer in self.layers:
+            x = layer(x, mask)
+
+        x = self.fc(x)
+        return x
 
 
 #################################################################################################################
@@ -270,16 +270,16 @@ if __name__ == "__main__":
     # print("remain", remain)
     import os
 
-    os.environ['MASTER_ADDR'] = 'localhost'
-    os.environ['MASTER_PORT'] = '29500'
-    torch.distributed.rpc.init_rpc('worker', rank=0, world_size=1)
+    # os.environ['MASTER_ADDR'] = 'localhost'
+    # os.environ['MASTER_PORT'] = '29500'
+    # torch.distributed.rpc.init_rpc('worker', rank=0, world_size=1)
     model, criterion, optimizer = get_init_model(dtype=torch.bfloat16)
     # load_model(model)
     print("premodel")
 
     model = model.to("cuda")
     pre_name = list(model.named_modules())
-    # model_to_recompute_mode(model)
+    model_to_recompute_mode(model)
     # make_checkpointed(model)
     start_time = time.time()
     gc.collect()

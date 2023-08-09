@@ -14,14 +14,14 @@ from utils.checkout_point import make_checkpointed
 
 def train(
         base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, lora=False, device="cuda:0",
-        batch_size=128, micro_batch_size=4, num_epochs=4, learning_rate=0.001, cutoff_len=256, gui=False, save=True
+        batch_size=64, micro_batch_size=4, num_epochs=2, learning_rate=0.0003, cutoff_len=256, gui=False, save=True
 ):
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
     print("start train")
     # tokenizer = transformers.AutoTokenizer.from_pretrained(base_model)
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model, trust_remote_code=True, use_fast=False)
-    tokenizer.pad_token_id = 0
-    tokenizer.padding_side = "left"
+    # tokenizer.pad_token_id = 0
+    # tokenizer.padding_side = "right"
 
     train_data = load_train_data(data_path, tokenizer, int(cutoff_len))
     print("tokenizer load ok, mode load ...")
@@ -34,10 +34,6 @@ def train(
     # if lora:
     #     print("lora")
     #     model = lora_model(model)
-    #
-    # if c_8bit:
-    #     print("compress 8bit")
-    #     compress_module(model)
 
     if c_8bit:
         print("model_to_recompute_mode")
@@ -60,20 +56,18 @@ def train(
         ),
         data_collator=transformers.DataCollatorForSeq2Seq(tokenizer, return_tensors="pt", padding=True),
     )
-    trainer.train()
     # shield_layer(model, ["k", "q", "v"])
 
-
     start_time = time.time()
-    # trainer.train()
+    trainer.train()
     end_time = time.time()
     print("train use time:", end_time - start_time)
-    if c_8bit:
-        recover_from_recompute_mode(model, )
+
     # if gui:
     #     model.eval()
     #     GUI(model, tokenizer, device)
-
+    if c_8bit:
+        recover_from_recompute_mode(model)
     if save:
         print("start save")
         model.save_pretrained(output_dir)
@@ -97,6 +91,7 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    print(transformers.__version__)
     # print("wqer", transformers.__file__)
     args = parse_args()
     train(**args)

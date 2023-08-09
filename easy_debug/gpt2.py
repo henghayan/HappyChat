@@ -59,7 +59,7 @@ def get_diy_model():
 if __name__ == "__main__":
     torch.cuda.init()
     # 初始化模型和分词器
-    tokenizer = GPT2Tokenizer.from_pretrained('/data/gpt2', use_fast=False)
+    tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
     tokenizer.pad_token = tokenizer.eos_token
     # print(tokenizer)
     # model = GPT2LMHeadModel.from_pretrained('/data/gpt2',

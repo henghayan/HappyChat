@@ -153,7 +153,9 @@ def apply_delta(base_model_path, target_model_path, delta_path, torch_dtype=torc
 
 
 if __name__ == "__main__":
-    base_model = "/data/llama-7b-hf"
-    delta_model = "/data/vicuna-7b-delta-v1.1"
-    target_path = '/data/fs7'
-    apply_delta(base_model, target_path, delta_model)
+    # base_model = "/data/llama-7b-hf"
+    # delta_model = "/data/vicuna-7b-delta-v1.1"
+    # target_path = '/data/fs7'
+    # apply_delta(base_model, target_path, delta_model)
+
+    make_delta()

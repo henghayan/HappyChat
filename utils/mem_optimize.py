@@ -41,15 +41,16 @@ class RecomputeLinearFunction(torch.autograd.Function):
 
         input, weight, bias = ctx.saved_tensors
         grad_input = grad_weight = grad_bias = None
-
         if ctx.needs_input_grad[0]:
             # grad_input = torch.bmm(grad_output, weight.expand(grad_output.size(0), *weight.size()))
             # 'ijk,kl->ijl' grad_output（ijk）和 weight（kl）相乘，然后对 k 维度进行求和，结果是 ijl
             # 即 (batch_size, seq_length, in_features)
             grad_input = torch.einsum('ijk,kl->ijl', grad_output, weight)
-        if ctx.needs_input_grad[1]:
+        if ctx.needs_input_grad[0]:
             # grad_weight = torch.bmm(input.transpose(1, 2), grad_output).sum(0).transpose(0, 1)
-            grad_weight = torch.einsum('ijk,ikl->jkl', input, grad_output).sum(dim=0)
+            # grad_weight = torch.einsum('bij,bij->ji', input, grad_output)
+            intermediate = torch.einsum('ijk,ijl->kl', input, grad_output)
+            grad_weight = intermediate.transpose(0, 1)
             ctx.module.weight -= grad_weight * ctx.module.lr
         if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum(0)
@@ -61,6 +62,7 @@ class RecomputeLinear(torch.nn.Module):
     def __init__(self, weight, bias, lr=0.003):
         super().__init__()
         self.weight = weight.detach()
+        # self.weight.requires_grad = True
         self.bias = bias.detach() if bias is not None else None
         self.lr = lr
 
@@ -139,7 +141,7 @@ class TimeLinearFunction(torch.autograd.Function):
         # start_event = torch.cuda.Event(enable_timing=True)
         # end_event = torch.cuda.Event(enable_timing=True)
         # start_event.record()
-
+        print("ctx.needs_input_grad", ctx.needs_input_grad)
         if ctx.needs_input_grad[0]:
             # grad_input = torch.bmm(grad_output, weight.expand(grad_output.size(0), *weight.size()))
             # 'ijk,kl->ijl' grad_output（ijk）和 weight（kl）相乘，然后对 k 维度进行求和，结果是 ijl

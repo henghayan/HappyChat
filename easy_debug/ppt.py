@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 import time
-from fairscale.nn import Pipe
 import os
 import torch.distributed.pipeline.sync as ppsync
 from utils.mem_optimize import model_to_recompute_mode, RecomputeLinearFunction, TimeLinear
@@ -14,8 +13,8 @@ from utils.mem_optimize import model_to_recompute_mode, RecomputeLinearFunction,
 class Layer(nn.Module):
     def __init__(self, c):
         super().__init__()
-        # self.layers = nn.ModuleList([TimeLinear(4096 * 2, 4096 * 2, i, c) for i in range(16)])
-        self.layers = nn.ModuleList([nn.Linear(4096*2, 4096*2) for i in range(12)])
+        self.layers = nn.ModuleList([TimeLinear(4096 * 2, 4096 * 2, i, c) for i in range(16)])
+        # self.layers = nn.ModuleList([nn.Linear(4096*2, 4096*2) for i in range(12)])
 
     def forward(self, x):
         for layer in self.layers:
@@ -47,7 +46,7 @@ if __name__ == "__main__":
     layer1 = Layer(0).to('cuda:0')
     layer2 = Layer(multi_gpu).to(f'cuda:{multi_gpu}')
 
-    model = nn.Sequential(layer1, layer2)
+    # model = nn.Sequential(layer1, layer2)
     # a = list(model.named_children())
     print("a")
     model = tempTM1(layer1, layer2)

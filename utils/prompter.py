@@ -42,7 +42,7 @@ class Prompter(object):
         if not self.real_template:
             if output_label is None:
                 return input_data
-            return f"{input_data}{output_label}"
+            return f"{input_data}\n{output_label}"
 
         t = self.template["prompt"]
         res = t.format(

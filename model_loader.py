@@ -43,8 +43,8 @@ def load_model(model_path, torch_dtype=torch.float16, **kv):
 #     return model
 
 
-def compress_8bit(model, device="cuda:0"):
-    compress_module(model, device)
+def compress_8bit(model):
+    compress_module(model)
     return
 
 

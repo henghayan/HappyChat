@@ -11,6 +11,8 @@ from threading import Thread
 
 from model_loader import load_model, compress_8bit
 from utils.prompter import Prompter
+from transformers.models.llama.modeling_llama import LlamaForCausalLM
+import transformers
 
 
 def wrap_evaluate(model, tokenizer, device, prompt_template=""):
@@ -98,10 +100,18 @@ def main(path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lo
     tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True, use_fast=False)
     print("tokenizer loaded ok")
     print("start load model...")
-    model = load_model(path)
-
-    if load_8bit:
-        compress_8bit(model, device)
+    # model = load_model(path)
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        path,
+        torch_dtype=torch.bfloat16,
+        trust_remote_code=True,
+        # load_in_8bit=True,
+        device_map="auto",
+    )
+    all_layer_names = [name for name, _ in model.named_parameters()]
+    # print("all_layer_names", len(all_layer_names), all_layer_names)
+    # if load_8bit:
+    #     compress_8bit(model)
     # if lora:
     #     lora_model(model)
 
@@ -257,5 +267,6 @@ def test_gr():
 
 
 if __name__ == "__main__":
+    print(transformers.__version__)
     main(get_args().model_path, get_args().model_path, "cuda", False, get_args().c_8bit, get_args().lora)
     # test_gr()
