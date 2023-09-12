@@ -20,7 +20,7 @@ def load_model(model_path, torch_dtype=torch.float16, **kv):
         torch_dtype=torch_dtype,
         trust_remote_code=True,
         device_map="auto",
-        # load_in_8bit=True,
+        load_in_8bit=True,
         **kv
     )
     return model

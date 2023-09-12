@@ -100,14 +100,14 @@ def main(path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lo
     tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True, use_fast=False)
     print("tokenizer loaded ok")
     print("start load model...")
-    # model = load_model(path)
-    model = transformers.AutoModelForCausalLM.from_pretrained(
-        path,
-        torch_dtype=torch.bfloat16,
-        trust_remote_code=True,
-        # load_in_8bit=True,
-        device_map="auto",
-    )
+    model = load_model(path)
+    # model = transformers.AutoModelForCausalLM.from_pretrained(
+    #     path,
+    #     torch_dtype=torch.bfloat16,
+    #     trust_remote_code=True,
+    #     # load_in_8bit=True,
+    #     device_map="auto",
+    # )
     all_layer_names = [name for name, _ in model.named_parameters()]
     # print("all_layer_names", len(all_layer_names), all_layer_names)
     # if load_8bit:
@@ -158,7 +158,7 @@ def GUI(model, tokenizer, device, share=False):
                 label="Output",
             )
         ],
-        title="模型测试",
+        title="呀哈哈",
         description="测试",
     ).queue().launch(server_name="0.0.0.0", share=share)
 

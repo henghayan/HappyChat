@@ -185,9 +185,9 @@ for i in range(len(text) - sequence_length):
     target_seqs.append([char_to_idx[char] for char in target_seq])
 
 # 参数设置
-d_model = 2048
-num_heads = 2
-num_layers = 2
+d_model = 1024
+num_heads = 128
+num_layers = 4
 vocab_size = len(chars)
 n_epochs = 4
 print_interval = 10
@@ -279,7 +279,7 @@ if __name__ == "__main__":
 
     model = model.to("cuda")
     pre_name = list(model.named_modules())
-    model_to_recompute_mode(model)
+    # model_to_recompute_mode(model)
     # make_checkpointed(model)
     start_time = time.time()
     gc.collect()

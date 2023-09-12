@@ -3,6 +3,7 @@ from datasets import load_dataset
 from torch.utils.data import DataLoader
 import transformers
 
+
 def data_format_func(tokenizer, cutoff_len=256, add_eos_token=True):
     prompter = Prompter(real_template=False)
 
@@ -43,6 +44,7 @@ def collate_fn(batch):
     labels = pad_sequence([Tensor(item) for item in labels], batch_first=True).long()
 
     return {'input_ids': input_ids, 'attention_mask': attention_mask, 'labels': labels}
+
 
 # def get_all_batch_data():
 #     DataLoader

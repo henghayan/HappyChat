@@ -14,13 +14,18 @@ from utils.checkout_point import make_checkpointed
 
 def train(
         base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, lora=False, device="cuda:0",
-        batch_size=64, micro_batch_size=4, num_epochs=2, learning_rate=0.0003, cutoff_len=256, gui=False, save=True
+        batch_size=32, micro_batch_size=8, num_epochs=10, learning_rate=0.0003, cutoff_len=256, gui=False, save=True
 ):
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
     print("start train")
     # tokenizer = transformers.AutoTokenizer.from_pretrained(base_model)
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model, trust_remote_code=True, use_fast=False)
+    tokenizer.pad_token_id = tokenizer.eod_id
+    tokenizer.bos_token_id = tokenizer.eod_id
+    tokenizer.eos_token_id = tokenizer.eod_id
+
     # tokenizer.pad_token_id = 0
+
     # tokenizer.padding_side = "right"
 
     train_data = load_train_data(data_path, tokenizer, int(cutoff_len))
@@ -63,9 +68,9 @@ def train(
     end_time = time.time()
     print("train use time:", end_time - start_time)
 
-    # if gui:
-    #     model.eval()
-    #     GUI(model, tokenizer, device)
+    if gui:
+        model.eval()
+        GUI(model, tokenizer, device)
     if c_8bit:
         recover_from_recompute_mode(model)
     if save:
