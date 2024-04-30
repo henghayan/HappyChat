@@ -1,5 +1,6 @@
 import sentencepiece as spm
 import time
+import pandas as pd
 
 
 def train_chinese_sp_model(input_file=None, input_text=None, model_prefix='chinese_sp', vocab_size=32000):
@@ -29,11 +30,11 @@ def print_token(file_path):
 
 
 if __name__ == "__main__":
-    # data_path = "/data/HappyChat/train_data/token.txt"
-    # res_path = "/data/tokenizer/test_sp"
-    # start_time = time.time()
-    # train_chinese_sp_model(input_file=data_path, model_prefix=res_path, vocab_size=10000)
-    # end_time = time.time()
-    # print("use time:", end_time-start_time)
+    data_path = "/data/train_data/chinese.txt"
+    res_path = "/data/tokenizer/gpt4_0914"
+    start_time = time.time()
+    train_chinese_sp_model(input_file=data_path, model_prefix=res_path, vocab_size=10000)
+    end_time = time.time()
+    print("use time:", end_time-start_time)
 
-    print_token("/data/tokenizer/test_sp.vocab")
+    print_token("/data/tokenizer/gpt4_0914.vocab")

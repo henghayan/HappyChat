@@ -12,7 +12,6 @@ from typing import List
 from utils.compression import compress_module
 
 
-
 def load_model(model_path, torch_dtype=torch.float16, **kv):
     model_map = {0: [0, 1, 2, 3, 4, 5], 1: [6, 7, 8, 9, 10, 11]}
     model = transformers.AutoModelForCausalLM.from_pretrained(
@@ -20,7 +19,7 @@ def load_model(model_path, torch_dtype=torch.float16, **kv):
         torch_dtype=torch_dtype,
         trust_remote_code=True,
         device_map="auto",
-        load_in_8bit=True,
+        # load_in_8bit=True,
         **kv
     )
     return model

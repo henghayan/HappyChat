@@ -24,6 +24,23 @@ def data_format_func(tokenizer, cutoff_len=256, add_eos_token=True):
     return data_format
 
 
+def data_hf_data_func(tokenizer, cutoff_len=256, add_eos_token=True):
+    def data_format(data_point):
+        data_org = data_point
+        prompt = data_org['prompt']
+        ans = data_org['answer']
+        if len(ans) > 0:
+            res = "%s. %s" %(prompt, ans[0])
+        else:
+            res= prompt
+        # print("full_prompt", full_prompt)
+
+        result = tokenizer(res, truncation=True, max_length=cutoff_len, padding=False, return_tensors=None)
+        # print("result", result)
+        return result
+
+    return data_format
+
 def load_train_data(data_path, tokenizer, cutoff_len=256):
     data = load_dataset('json', data_files=data_path)
     train_data = data["train"].map(data_format_func(tokenizer, cutoff_len))

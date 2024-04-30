@@ -28,7 +28,6 @@ del model1
 gc.collect()
 torch.cuda.empty_cache()
 
-# 在这里进行你的训练...
 
 # 加载训练后的模型
 model2 = AutoModelForCausalLM.from_pretrained('/data/llm2',

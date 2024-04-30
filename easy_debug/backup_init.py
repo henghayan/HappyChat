@@ -47,7 +47,9 @@ class MultiHeadAttention(nn.Module):
         K = K.view(N, -1, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
         V = V.view(N, -1, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
 
-        attention = torch.matmul(Q, K.permute(0, 1, 3, 2)) / self.head_dim ** 0.5
+        temp_K = K.permute(0, 1, 3, 2)
+
+        attention = torch.matmul(Q, temp_K) / self.head_dim ** 0.5
         if mask is not None:
             attention = attention.masked_fill(mask == 0, float("-1e20"))
         attention = torch.softmax(attention, dim=-1)
@@ -111,7 +113,7 @@ class TransformerTest(nn.Module):
         return x
 
 
-import torch.distributed.pipeline.sync as pipe_sync
+# import torch.distributed.pipeline.sync as pipe_sync
 
 # class TransformerTest(nn.Module):
 #     def __init__(self, d_model, num_heads, num_layers, vocab_size, dtype=torch.float16):
@@ -153,7 +155,7 @@ chars = list(set(text))
 char_to_idx = {char: idx for idx, char in enumerate(chars)}
 idx_to_char = {idx: char for idx, char in enumerate(chars)}
 
-sequence_length = 32
+sequence_length = 17
 input_seqs = []
 target_seqs = []
 
@@ -164,9 +166,9 @@ for i in range(len(text) - sequence_length):
     target_seqs.append([char_to_idx[char] for char in target_seq])
 
 # 参数设置
-d_model = 2048
+d_model = 32
 num_heads = 2
-num_layers = 32
+num_layers = 4
 vocab_size = len(chars)
 n_epochs = 1
 print_interval = 10
@@ -243,16 +245,16 @@ if __name__ == "__main__":
     # load_model(model)
     print("premodel")
 
-    model = model.to("cuda")
+    # model = model.to("cuda")
     pre_name = list(model.named_modules())
-    model_to_recompute_mode(model)
+    # model_to_recompute_mode(model)
     # make_checkpointed(model)
     start_time = time.time()
     gc.collect()
     torch.cuda.empty_cache()
     # a = list(model.named_parameters())
     # now_name = list(model.named_modules())
-    train(model, criterion, optimizer)
+    train(model, criterion, optimizer, "cpu")
     end_time = time.time()
     print("use_time", end_time - start_time)
     res = generate_text(model, "这是")

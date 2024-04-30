@@ -14,15 +14,18 @@ from utils.checkout_point import make_checkpointed
 
 def train(
         base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, lora=False, device="cuda:0",
-        batch_size=32, micro_batch_size=8, num_epochs=10, learning_rate=0.0003, cutoff_len=256, gui=False, save=True
+        batch_size=32, micro_batch_size=4, num_epochs=2, learning_rate=0.0003, cutoff_len=256, gui=False, save=True
 ):
+
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
     print("start train")
     # tokenizer = transformers.AutoTokenizer.from_pretrained(base_model)
     tokenizer = transformers.AutoTokenizer.from_pretrained(base_model, trust_remote_code=True, use_fast=False)
-    tokenizer.pad_token_id = tokenizer.eod_id
-    tokenizer.bos_token_id = tokenizer.eod_id
-    tokenizer.eos_token_id = tokenizer.eod_id
+    tokenizer.pad_token_id = tokenizer.pad_token_id
+    tokenizer.bos_token_id = tokenizer.bos_token_id
+    tokenizer.eos_token_id = tokenizer.eos_token_id
+
+    tokenizer.pad_token = tokenizer.eos_token
 
     # tokenizer.pad_token_id = 0
 
@@ -98,5 +101,7 @@ def parse_args():
 if __name__ == "__main__":
     print(transformers.__version__)
     # print("wqer", transformers.__file__)
-    args = parse_args()
-    train(**args)
+    path = "/data2/llm3-8"
+    data_path = "/data/HappyChat/train_data/vir.json"
+    train(path, data_path, "/data/output", c_8bit=True)
+
