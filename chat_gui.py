@@ -269,7 +269,8 @@ def test_gr():
 
 if __name__ == "__main__":
     print(transformers.__version__)
-    main(get_args().model_path, get_args().model_path, "cuda", False, get_args().c_8bit, get_args().lora)
+    path = '/data2/llm3-70'
+    main(path, path, "cuda", False, get_args().c_8bit, get_args().lora)
     # test_gr()
 
 

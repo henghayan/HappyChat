@@ -25,12 +25,15 @@ def load_model(model_path, torch_dtype=torch.float16, **kv):
     return model
 
 
+
+
+
 # def lora_model(model, lora_r: int = 4,
 #                lora_alpha: int = 8,
 #                lora_dropout: float = 0.05,
 #                lora_target_modules: List[str] = ["q_proj", "v_proj", 'gate_proj', 'down_proj', 'up_proj', 'k_proj', "o_proj1"]):
 #                #  lora_target_modules: List[str] = []):
-#     config = LoraConfig(
+#     config.json = LoraConfig(
 #         r=lora_r,
 #         lora_alpha=lora_alpha,
 #         target_modules=lora_target_modules,
@@ -38,7 +41,7 @@ def load_model(model_path, torch_dtype=torch.float16, **kv):
 #         bias="none",
 #         task_type="CAUSAL_LM",
 #     )
-#     model = get_peft_model(model, config)
+#     model = get_peft_model(model, config.json)
 #     return model
 
 

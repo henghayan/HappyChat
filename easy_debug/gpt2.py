@@ -50,7 +50,7 @@ def get_diy_model():
                         # use_bfloat16=True,
                         # torch_dtype=torch.float16,
                         qwer="qwer")
-    # config = GPT2Config()
+    # config.json = GPT2Config()
     return GPT2LMHeadModel(config)
 
 

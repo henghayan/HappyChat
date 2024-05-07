@@ -14,7 +14,7 @@ from utils.checkout_point import make_checkpointed
 
 def train(
         base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, lora=False, device="cuda:0",
-        batch_size=32, micro_batch_size=4, num_epochs=2, learning_rate=0.0003, cutoff_len=256, gui=False, save=True
+        batch_size=32, micro_batch_size=8, num_epochs=4, learning_rate=0.0003, cutoff_len=512, gui=False, save=True
 ):
 
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
