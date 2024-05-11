@@ -14,7 +14,7 @@ from utils.checkout_point import make_checkpointed
 
 def train(
         base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, lora=False, device="cuda:0",
-        batch_size=32, micro_batch_size=8, num_epochs=4, learning_rate=0.0003, cutoff_len=512, gui=False, save=True
+        batch_size=128, micro_batch_size=8, num_epochs=1, learning_rate=0.0003, cutoff_len=512, gui=False, save=True
 ):
 
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
@@ -46,11 +46,12 @@ def train(
     if c_8bit:
         print("model_to_recompute_mode")
         model_to_recompute_mode(model, learning_rate)
+        print("model compress ok")
         # make_checkpointed(model)
 
     gc.collect()
     torch.cuda.empty_cache()
-    print("model compress ok")
+
     trainer = transformers.Trainer(
         model=model,
         train_dataset=train_data,
@@ -103,5 +104,5 @@ if __name__ == "__main__":
     # print("wqer", transformers.__file__)
     path = "/data2/llm3-8"
     data_path = "/data/HappyChat/train_data/vir.json"
-    train(path, data_path, "/data/output", c_8bit=True)
+    train(path, data_path, "/data/output", c_8bit=False)
 

@@ -8,8 +8,8 @@ import mii
 app = Flask(__name__)
 
 # 加载模型
-model_path = "/data2/llm3-8"
-# pipe = mii.pipeline(model_path)
+model_path = "/data2/llm3-8-half"
+# pipe = mii.pipeline(model_path, quantization_mode='wf6af16')
 
 
 # client = mii.serve(model_path)

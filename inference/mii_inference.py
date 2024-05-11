@@ -1,22 +1,23 @@
 import argparse
 import gc
+import json
 
 import gradio as gr
 import torch
 import transformers
-from transformers import GenerationConfig
+from transformers import GenerationConfig, AwqConfig
+# from transformers import QuantoConfig
 import traceback
 from queue import Queue
 from threading import Thread
 
-from model_loader import load_model, compress_8bit
 from utils.prompter import Prompter
-from transformers.models.llama.modeling_llama import LlamaForCausalLM
 import transformers
 
+import mii
 
 
-def wrap_evaluate(model, tokenizer, device, prompt_template=""):
+def wrap_evaluate(client, tokenizer, device, prompt_template=""):
     prompter = Prompter(prompt_template, real_template=False)
 
     def evaluate(
@@ -29,62 +30,45 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
             stream_output=False,
             **kwargs,
     ):
-        prompt = prompter.generate_prompt(input_data)
-        print("prompt", prompt)
-        inputs = tokenizer(prompt, return_tensors="pt")
-        input_ids = inputs["input_ids"].to(device)
-        print("input_ids", input_ids)
-        generation_config = GenerationConfig(
-            temperature=temperature,
-            top_p=top_p,
-            top_k=top_k,
-            num_beams=num_beams,
-            **kwargs,
+        # prompt = prompter.generate_prompt(input_data)
+        prompt = json.loads(input_data)
+        prompt = tokenizer.apply_chat_template(
+            prompt,
+            tokenize=False,
+            add_generation_prompt=True
         )
+        print("prompt", prompt)
 
         generate_params = {
-            "input_ids": input_ids,
-            "generation_config": generation_config,
-            "return_dict_in_generate": True,
-            "output_scores": True,
+            "temperature": temperature,
+            "top_p": top_p,
+            "top_k": top_k,
             "max_new_tokens": max_new_tokens,
         }
 
         if stream_output:
-            def generate_with_callback(callback=None, **kwargs):
-                kwargs.setdefault(
-                    "stopping_criteria", transformers.StoppingCriteriaList()
-                )
-                kwargs["stopping_criteria"].append(
-                    Stream(callback_func=callback)
-                )
+            def generate_with_callback(prompts, callback=None, **kwargs):
                 with torch.no_grad():
-                    model.generate(**kwargs)
+                    client.generate(prompts, streaming_fn=callback, **kwargs)
 
-            def generate_with_streaming(**kwargs):
+            def generate_with_streaming(prompts, **kwargs):
                 print("start init generate_with_streaming")
                 return Iteratorize(
-                    generate_with_callback, kwargs, callback=None
+                    generate_with_callback, prompts, kwargs, callback=None
                 )
 
-            with generate_with_streaming(**generate_params) as generator:
+            with generate_with_streaming(prompt, **generate_params) as generator:
                 for output in generator:
-                    # new_tokens = len(output) - len(input_ids[0])
-                    decoded_output = tokenizer.decode(output)
-                    # print(decoded_output)
-                    if output[-1] in [tokenizer.eos_token_id]:
+                    item_res = prompter.get_response(output)
+                    if item_res == "<break>":
                         break
-
-                    yield prompter.get_response(decoded_output)
+                    yield item_res
             return  # early return for stream_output
 
         # Without streaming
         with torch.no_grad():
-            generation_output = model.generate(
-                input_ids=input_ids,
-                generation_config=generation_config,
-                return_dict_in_generate=True,
-                output_scores=True,
+            generation_output = client.generate(
+                prompts=prompt,
                 max_new_tokens=max_new_tokens,
             )
         s = generation_output.sequences[0]
@@ -94,43 +78,25 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
     return evaluate
 
 
-def main(path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lora=False):
+def main(model_path, tokenizer_path, device="cuda:0", share=False, load_8bit=False, lora=False):
     print("model_path", tokenizer_path)
     print("token loading ...")
     # tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path)
     tokenizer = transformers.AutoTokenizer.from_pretrained(tokenizer_path, trust_remote_code=True, use_fast=False)
     print("tokenizer loaded ok")
     print("start load model...")
-    # model = load_model(path, torch_dtype=torch.qint8)
-    model = transformers.AutoModelForCausalLM.from_pretrained(
-        path,
-        torch_dtype=torch.bfloat16,
-        trust_remote_code=True,
-        # load_in_8bit=True,
-        device_map="auto",
-    )
-    all_layer_names = [name for name, _ in model.named_parameters()]
-    # print("all_layer_names", len(all_layer_names), all_layer_names)
-    # if load_8bit:
-    #     compress_8bit(model)
-    # if lora:
-    #     lora_model(model)
+    # max_memory_mapping = {"cpu": "32GB", 0: "4GB", 1: "4GB", 2: "4GB"}
+    client = mii.serve(model_path, tensor_parallel=2, quantization_mode='wf6af16')
 
-    # model.to(device)
-    # model.eval()
-    # gc.collect()
-    # torch.cuda.empty_cache()
-    # if torch.__version__ >= "2" and sys.platform != "win32":
-    #     model = torch.compile(model)
     print("start init evaluate_func ")
     #
-    GUI(model, tokenizer, device, share=share)
+    GUI(client, tokenizer, device, share=share)
 
 
-def GUI(model, tokenizer, device, share=False):
+def GUI(client, tokenizer, device, share=False):
     gc.collect()
     torch.cuda.empty_cache()
-    evaluate_func = wrap_evaluate(model, tokenizer, device)
+    evaluate_func = wrap_evaluate(client, tokenizer, device)
     print("start init gui")
     gr.Interface(
         fn=evaluate_func,
@@ -164,34 +130,31 @@ def GUI(model, tokenizer, device, share=False):
     ).queue().launch(server_name="0.0.0.0", share=share)
 
 
-class Stream(transformers.StoppingCriteria):
-    def __init__(self, callback_func=None):
-        self.callback_func = callback_func
-
-    def __call__(self, input_ids, scores) -> bool:
-        if self.callback_func is not None:
-            self.callback_func(input_ids[0])
-        return False
-
-
 class Iteratorize:
 
-    def __init__(self, func, kwargs={}, callback=None):
+    def __init__(self, func, prompts, kwargs={}, callback=None):
         self.mfunc = func
         self.c_callback = callback
         self.q = Queue()
         self.sentinel = object()
         self.kwargs = kwargs
         self.stop_now = False
+        self.start_prompts = prompts
+        self.res = ""
+        self.break_sign = False
 
-        def _callback(val):
+        def _callback(response):
             if self.stop_now:
                 raise ValueError
-            self.q.put(val)
+            current_res = response[0]
+            if current_res.finish_reason == "none":
+                self.q.put(response[0].generated_text)
+            else:
+                self.break_sign = True
 
         def gentask():
             try:
-                ret = self.mfunc(callback=_callback, **self.kwargs)
+                ret = self.mfunc(prompts=self.start_prompts, callback=_callback, **self.kwargs)
             except ValueError:
                 pass
             except:
@@ -213,7 +176,10 @@ class Iteratorize:
         if obj is self.sentinel:
             raise StopIteration
         else:
-            return obj
+            if self.break_sign:
+                return "<break>"
+            self.res += obj
+            return self.res
 
     def __enter__(self):
         return self
@@ -249,7 +215,7 @@ def test_gr():
                 minimum=0, maximum=100, step=1, value=40, label="Top k"
             ),
             gr.components.Slider(
-                minimum=2, maximum=4, step=1, value=4, label="Beams"
+                minimum=1, maximum=4, step=1, value=1, label="Beams"
             ),
             gr.components.Slider(
                 minimum=1, maximum=8000, step=1, value=128, label="Max tokens"
@@ -269,8 +235,7 @@ def test_gr():
 
 if __name__ == "__main__":
     print(transformers.__version__)
-    path = '/data2/nv_llm_70'
-    main(path, path, "cuda", False, get_args().c_8bit, get_args().lora)
+    # main("/data2/awq_llm3_8", "/data2/awq_llm3_8", "cuda", False, get_args().c_8bit, get_args().lora)
     # test_gr()
 
-
+    main("/data2/llm3-70-half", "/data2/llm3-70-half", "cuda", False, get_args().c_8bit, get_args().lora)

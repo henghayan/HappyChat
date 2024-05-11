@@ -4,13 +4,14 @@ import time
 import torch
 
 
-def model_to_recompute_mode(module, offload_manager=None, lr=0.003):
+def model_to_recompute_mode(module, lr=0.003):
     if type(module) == torch.nn.ModuleList:
         children = list(module.named_children())
         for i in range(len(children)):
             item = children[i]
+
             if type(item[1]) == torch.nn.Linear:
-                module[i] = RecomputeLinear(item[1].weight, item[1].bias, offload_manager=offload_manager, lr=lr)
+                module[i] = RecomputeLinear(item[1].weight, item[1].bias, lr=lr)
 
     for attr_str in dir(module):
         target_attr = getattr(module, attr_str)
@@ -31,17 +32,13 @@ class RecomputeLinearFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input, weight, bias, module):
         ctx.module = module
-        output = torch.nn.functional.linear(input, weight, bias)
-        input = input.to('cpu')
         ctx.save_for_backward(input, weight, bias)
-        # # gc.collect()
-        torch.cuda.empty_cache()
+        output = torch.nn.functional.linear(input, weight, bias)
         return output
 
     @staticmethod
     def backward(ctx, grad_output):
         input, weight, bias = ctx.saved_tensors
-        input = input.to(weight.device)
         grad_input = grad_weight = grad_bias = None
         if ctx.needs_input_grad[0]:
             # grad_input = torch.bmm(grad_output, weight.expand(grad_output.size(0), *weight.size()))
@@ -57,20 +54,16 @@ class RecomputeLinearFunction(torch.autograd.Function):
         if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum(0)
             ctx.module.bias -= grad_bias * ctx.module.lr
-        # del input, weight, bias
-        # torch.cuda.empty_cache()
         return grad_input, grad_weight, grad_bias, None
 
 
 class RecomputeLinear(torch.nn.Module):
-    def __init__(self, weight, bias, offload_manager=None, lr=0.003):
+    def __init__(self, weight, bias, lr=0.003):
         super().__init__()
         self.weight = weight.detach()
-        self.weight.__dict__ = weight.__dict__
         # self.weight.requires_grad = True
         self.bias = bias.detach() if bias is not None else None
         self.lr = lr
-        self.offload_manager = offload_manager
 
     def forward(self, input_tensor):
         return RecomputeLinearFunction.apply(input_tensor, self.weight, self.bias, self)
