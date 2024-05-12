@@ -2,6 +2,7 @@ import gc
 import time
 
 import torch
+from offload_manager import OffloadManager
 
 
 def model_to_recompute_mode(module, offload_manager=None, lr=0.003):
@@ -18,30 +19,46 @@ def model_to_recompute_mode(module, offload_manager=None, lr=0.003):
             setattr(
                 module,
                 attr_str,
-                RecomputeLinear(target_attr.weight, target_attr.bias, lr=lr),
+                RecomputeLinear(target_attr.weight, target_attr.bias, offload_manager=offload_manager, lr=lr),
             )
+
             gc.collect()
             torch.cuda.empty_cache()
-    a = list(module.named_children())
+    # a = list(module.named_children())
     for name, child in module.named_children():
-        model_to_recompute_mode(child)
+        model_to_recompute_mode(child, offload_manager)
 
 
 class RecomputeLinearFunction(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input, weight, bias, module):
         ctx.module = module
+
+        weight_index = weight.__dict__['param_index']
+        if ctx.module.offload_manager:
+            ctx.module.offload_manager.param_load(weight_index)
+
+        # if not input.is_cuda:
+        #     input.data = input.to(weight.device)
         output = torch.nn.functional.linear(input, weight, bias)
-        input = input.to('cpu')
+        # input.data = input.to('cpu')
+        
+
         ctx.save_for_backward(input, weight, bias)
-        # # gc.collect()
+        # gc.collect()
         torch.cuda.empty_cache()
+        if ctx.module.offload_manager:
+            ctx.module.offload_manager.param_offload(weight_index)
         return output
 
     @staticmethod
     def backward(ctx, grad_output):
         input, weight, bias = ctx.saved_tensors
-        input = input.to(weight.device)
+        weight_index = weight.__dict__['param_index']
+        if ctx.module.offload_manager:
+            ctx.module.offload_manager.param_load(weight_index)
+
+        # input.data = input.to(weight.device)
         grad_input = grad_weight = grad_bias = None
         if ctx.needs_input_grad[0]:
             # grad_input = torch.bmm(grad_output, weight.expand(grad_output.size(0), *weight.size()))
@@ -59,18 +76,24 @@ class RecomputeLinearFunction(torch.autograd.Function):
             ctx.module.bias -= grad_bias * ctx.module.lr
         # del input, weight, bias
         # torch.cuda.empty_cache()
+        if ctx.module.offload_manager:
+            ctx.module.offload_manager.param_offload(weight_index)
         return grad_input, grad_weight, grad_bias, None
 
 
 class RecomputeLinear(torch.nn.Module):
-    def __init__(self, weight, bias, offload_manager=None, lr=0.003):
+    def __init__(self, weight, bias, offload_manager: OffloadManager = None, lr=0.003):
         super().__init__()
         self.weight = weight.detach()
         self.weight.__dict__ = weight.__dict__
+        del weight
+        self.offload_manager = offload_manager
+        if offload_manager is not None:
+            self.offload_manager.add_offload_param_tensor(self.weight)
+
         # self.weight.requires_grad = True
         self.bias = bias.detach() if bias is not None else None
         self.lr = lr
-        self.offload_manager = offload_manager
 
     def forward(self, input_tensor):
         return RecomputeLinearFunction.apply(input_tensor, self.weight, self.bias, self)
@@ -106,7 +129,6 @@ def recover_from_recompute_mode(module, same_device=False):
                                         dtype=target_attr.weight.dtype, device=target_attr.weight.device))
                 getattr(module, attr_str).bias.data.copy_(target_attr.bias.data)
             getattr(module, attr_str).weight.data.copy_(target_attr.weight.data)
-    a = list(module.named_children())
     for name, child in module.named_children():
         recover_from_recompute_mode(child)
 

@@ -6,6 +6,7 @@ import time
 class OffloadManager:
     def __init__(self, model, cuda_num, offload_device='cpu'):
         self.model = model
+        self.tem_p = list(model.named_parameters())
         self.mark_model_params()
 
         self.streams = {}
@@ -59,7 +60,7 @@ class OffloadManager:
         stream_key = 'cpu_to_cuda:%s' % origin_device_index
         with torch.cuda.stream(self.streams[stream_key]):
             if not target_param.is_cuda:
-                target_param.data = target_param.to(origin_device, non_blocking=non_blocking)
+                target_param.to(origin_device, non_blocking=non_blocking)
 
         self.streams[stream_key].synchronize()
 
@@ -71,14 +72,12 @@ class OffloadManager:
         stream_key = 'cuda:%s_to_cpu' % origin_device_index
         with torch.cuda.stream(self.streams[stream_key]):
             if target_param.is_cuda:
-                target_param.data = target_param.to(self.offload_device, non_blocking=non_blocking)
+                target_param.to(self.offload_device, non_blocking=non_blocking)
 
-        # self.streams[stream_key].synchronize()
+        self.streams[stream_key].synchronize()
         torch.cuda.empty_cache()
 
 
 if __name__ == '__main__':
-    s = torch.cuda.Stream(device="cuda:0")
-    with torch.cuda.stream(s):
-        pass
+    pass
 

@@ -253,7 +253,6 @@ if __name__ == "__main__":
     gc.collect()
     torch.cuda.empty_cache()
     # a = list(model.named_parameters())
-    # now_name = list(model.named_modules())
     train(model, criterion, optimizer, "cpu")
     end_time = time.time()
     print("use_time", end_time - start_time)
