@@ -36,10 +36,12 @@ class RecomputeLinearFunction(torch.autograd.Function):
         ctx.module = module
 
         if ctx.module.offload_manager:
-            if not weight.is_cuda:
-                ctx.module.offload_manager.param_load(weight)
-            if not input.is_cuda:
-                ctx.module.offload_manager.tensor_load(input)
+            ctx.module.offload_manager.param_load(weight, non_blocking=False)
+            ctx.module.offload_manager.next_param_load(weight, non_blocking=True)
+            # ctx.module.offload_manager.param_load(weight, non_blocking=False)
+            # ctx.module.offload_manager.next_param_load(weight, non_blocking=True)
+            # if not input.is_cuda:
+            #     ctx.module.offload_manager.tensor_load(input, non_blocking=False)
 
         output = torch.nn.functional.linear(input, weight, bias)
 
@@ -49,15 +51,16 @@ class RecomputeLinearFunction(torch.autograd.Function):
         ctx.save_for_backward(input, weight, bias)
         return output
 
+
     @staticmethod
     def backward(ctx, grad_output):
         input, weight, bias = ctx.saved_tensors
 
         if ctx.module.offload_manager:
-            if not weight.is_cuda:
-                ctx.module.offload_manager.param_load(weight)
-            if not input.is_cuda:
-                ctx.module.offload_manager.tensor_load(input)
+            ctx.module.offload_manager.param_load(weight, non_blocking=False)
+            ctx.module.offload_manager.pre_param_load(weight, non_blocking=True)
+            # if not input.is_cuda:
+            #     ctx.module.offload_manager.tensor_load(input)
 
         # input.data = input.to(weight.device)
         grad_input = grad_weight = grad_bias = None
@@ -78,7 +81,7 @@ class RecomputeLinearFunction(torch.autograd.Function):
 
         if ctx.module.offload_manager:
             ctx.module.offload_manager.param_offload(weight)
-            ctx.module.offload_manager.tensor_offload(input)
+            # ctx.module.offload_manager.tensor_offload(input)
 
         return grad_input, grad_weight, grad_bias, None
 

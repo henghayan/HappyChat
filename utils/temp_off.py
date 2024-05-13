@@ -16,20 +16,26 @@ def print_memory_usage(description):
     print(f"{description} - Allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 2:.2f} MB")
 
 
-hidden_num = 2 ** 12
+hidden_num = 2 ** 14
+dtype = None
 
 
 # 简单的MLP模型
 class SimpleMLP(nn.Module):
     def __init__(self):
         super(SimpleMLP, self).__init__()
-        self.fc1 = nn.Linear(hidden_num, hidden_num)
-        self.fc2 = nn.Linear(hidden_num, hidden_num)
-        self.fc3 = nn.Linear(hidden_num, hidden_num)
-        self.fc4 = nn.Linear(hidden_num, hidden_num)
+        self.fc1 = nn.Linear(hidden_num, hidden_num, dtype=dtype)
+        self.fc2 = nn.Linear(hidden_num, hidden_num, dtype=dtype)
+        self.fc3 = nn.Linear(hidden_num, hidden_num, dtype=dtype)
+        self.fc4 = nn.Linear(hidden_num, hidden_num, dtype=dtype)
+        self.fc7 = nn.Linear(hidden_num, hidden_num, dtype=dtype)
+        self.fc8 = nn.Linear(hidden_num, hidden_num, dtype=dtype)
+        self.fc5 = nn.Linear(hidden_num, hidden_num, dtype=dtype)
+        self.fc6 = nn.Linear(hidden_num, hidden_num, dtype=dtype)
 
-        self.prelu = nn.PReLU()
-        self.fc = nn.Linear(hidden_num, 2048)
+
+        self.prelu = nn.PReLU(dtype=dtype)
+        self.fc = nn.Linear(hidden_num, 2048, dtype=dtype)
 
     def forward(self, x):
         x1 = self.fc1(x)
@@ -69,8 +75,17 @@ class SimpleMLP(nn.Module):
         # torch.cuda.empty_cache()
 
         x5 = self.prelu(x4)
-        x6 = self.fc(x5)
 
+
+        x = self.fc5(x5)
+
+        x = self.fc6(x)
+
+        x = self.fc7(x)
+
+        x = self.fc8(x)
+
+        x6 = self.fc(x)
         # x5.data = torch.empty(0, dtype=x5.dtype, device=x5.device)
         # torch.cuda.synchronize()
         # temp_x5 = x5.detach().clone()
@@ -96,9 +111,9 @@ print_memory_usage("Param Use")
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
-batch_size = 128
-inputs = torch.randn(batch_size, 1024, hidden_num).to(device)
-labels = torch.randint(0, 1024, (batch_size, 2048)).to(device)
+batch_size = 32
+inputs = torch.randn(batch_size, 512, hidden_num, dtype=dtype).to(device)
+labels = torch.randint(0, 512, (batch_size, 2048), dtype=dtype).to(device)
 
 # 训练模型
 model.train()
