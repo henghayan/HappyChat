@@ -5,6 +5,7 @@ import transformers
 from offload_manager import OffloadManager
 from mem_optimize import model_to_recompute_mode
 from data_loader import load_train_data
+from transformers import Adafactor
 
 import sys
 sys.path.append("/data/HappyChat")
@@ -34,11 +35,11 @@ def train_with_re_offload(
         base_model,
         torch_dtype=dtype,
         trust_remote_code=True,
-        device_map="auto"
+        device_map="cuda:0"
     )
 
     offload_mgr = OffloadManager(model, 1)
-    model_to_recompute_mode(model, None)
+    model_to_recompute_mode(model, offload_mgr)
     gc.collect()
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
@@ -50,12 +51,14 @@ def train_with_re_offload(
             gradient_accumulation_steps=gradient_accumulation_steps,
             num_train_epochs=int(num_epochs),
             learning_rate=float(learning_rate),
-            output_dir=output_dir
+            output_dir=output_dir,
+            optim="adafactor"
         ),
         data_collator=transformers.DataCollatorForSeq2Seq(tokenizer, return_tensors="pt", padding=True),
     )
 
     start_time = time.time()
+
     trainer.train()
     end_time = time.time()
     print("train use time:", end_time - start_time)

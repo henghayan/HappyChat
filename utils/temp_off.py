@@ -1,126 +1,128 @@
 import torch
 import torch.nn as nn
-import transformers
+import torch.optim as optim
+from offload_manager import OffloadManager
+from mem_optimize import model_to_recompute_mode
 import time
+from torch.utils.checkpoint import checkpoint
+import gc
+
+# 设定设备
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class OffloadManager:
-    def __init__(self, model, cuda_num, offload_device='cpu'):
-        self.model = model
-        self.offload_device = offload_device
-        self.streams = {}
-        self.init_streams(cuda_num)
+def print_memory_usage(description):
+    torch.cuda.empty_cache()
+    print(f"{description} - Allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 2:.2f} MB")
 
-        # Pin and offload the specified layers to CPU at initialization
-        self.offload_param_list = []
-        self.origin_param_device_list = []
-        self.offload_initial_layers()
 
-    def init_streams(self, cuda_num):
-        for i in range(cuda_num):
-            self.streams['cpu_to_cuda:%s' % str(i)] = torch.cuda.Stream(device="cuda:%s" % i)
-            self.streams['cuda:%s_to_cpu' % str(i)] = torch.cuda.Stream(device="cuda:%s" % i)
+hidden_num = 2 ** 12
 
-    def offload_initial_layers(self):
-        offload_index = 0
-        for name, param in self.model.named_parameters():
-            if "layer" in name:
-                param.__dict__["offload_index"] = offload_index
-                offload_index += 1
 
-                assert param.is_cuda
-
-                param_device = param.device
-
-                with torch.cuda.stream(self.streams['cuda:%s_to_cpu' % param_device.index]):
-                    param.data = param.to(self.offload_device, non_blocking=True)
-                param.data = param.data.pin_memory()
-                self.offload_param_list.append(param)
-                self.origin_param_device_list.append(param_device.index)
-            else:
-                param.__dict__["offload_index"] = None
-
-    def param_load(self, offload_index: int, non_blocking: bool = True) -> None:
-        origin_device_index = self.origin_param_device_list[offload_index]
-        origin_device = torch.device("cuda:%s" % origin_device_index)
-        target_param = self.offload_param_list[offload_index]
-        stream_key = 'cpu_to_cuda:%s' % origin_device_index
-        with torch.cuda.stream(self.streams[stream_key]):
-            if not target_param.is_cuda:
-                target_param.to(origin_device, non_blocking=non_blocking)
-
-        self.streams[stream_key].synchronize()
-
-    def param_offload(self, offload_index: int, non_blocking: bool = True) -> None:
-        origin_device_index = self.origin_param_device_list[offload_index]
-
-        target_param = self.offload_param_list[offload_index]
-        stream_key = 'cuda:%s_to_cpu' % origin_device_index
-        with torch.cuda.stream(self.streams[stream_key]):
-            if target_param.is_cuda:
-                self.offload_param_list[offload_index].to(self.offload_device, non_blocking=non_blocking)
-
-        self.streams[stream_key].synchronize()
-        torch.cuda.empty_cache()
-
-class MyModel(nn.Module):
+# 简单的MLP模型
+class SimpleMLP(nn.Module):
     def __init__(self):
-        super(MyModel, self).__init__()
-        self.layer_a = nn.Linear(2**11, 2**11, bias=False)
-        self.layer_b = nn.Linear(2**11, 2**11, bias=False)
-        self.layer_c = nn.Linear(2**11, 2**11, bias=False)
+        super(SimpleMLP, self).__init__()
+        self.fc1 = nn.Linear(hidden_num, hidden_num)
+        self.fc2 = nn.Linear(hidden_num, hidden_num)
+        self.fc3 = nn.Linear(hidden_num, hidden_num)
+        self.fc4 = nn.Linear(hidden_num, hidden_num)
+
+        self.prelu = nn.PReLU()
+        self.fc = nn.Linear(hidden_num, 2048)
 
     def forward(self, x):
-        x = self.layer_a(x)
-        x = self.layer_b(x)
-        x = self.layer_c(x)
-        return x
+        x1 = self.fc1(x)
+        # x.data = torch.empty(0, dtype=x.dtype, device=x.device)
+        # torch.cuda.synchronize()
+        # temp_x = x.detach().clone()
+        # del x
+        # gc.collect()
+        # torch.cuda.empty_cache()
 
-class NLiner(torch.nn.Module):
-    def __init__(self, weight):
-        super().__init__()
-        self.weight = weight.detach() *2
-        self.weight.__dict__ = weight.__dict__
-
-
-if __name__ == '__main__':
-    # path = "/data2/llm3-8"
-    # data_path = "/data/HappyChat/train_data/vir.json"
-    #
-    # model = transformers.AutoModelForCausalLM.from_pretrained(
-    #     path,
-    #     torch_dtype=torch.bfloat16,
-    #     trust_remote_code=True,
-    #     device_map="cuda:0"
-    # )
-    #
-    # offload_mgr = OffloadManager(model, 1)
-    # b = list(model.named_parameters())
-    # torch.cuda.synchronize()
-    # torch.cuda.empty_cache()
-    #
-    # index = 0
-    # for name, p in model.named_parameters():
-    #     print(name, p)
-    #
-    #     offload_mgr.param_load(index)
-    #
-    #     offload_mgr.param_offload(index)
-    #
-    #     index += 1
+        x2 = self.fc2(x1)
+        # x1.data = torch.empty(0, dtype=x1.dtype, device=x1.device)
+        # del x1
+        # torch.cuda.synchronize()
+        # gc.collect()
+        # torch.cuda.empty_cache()
+        # temp_x1 = x1.detach().clone()
 
 
 
 
-    # 初始化模型
-    model = MyModel()
-    a = list(model.named_parameters())
-    # 将layer_b detach并替换
-    model = model.to("cuda:0")
-    for name, module in model.named_children():
-        if module is model.layer_b:
-            detached_b = NLiner(module.weight)
-            setattr(model, name, detached_b)
-            del module
+        x3 = self.fc3(x2)
+        # x2.data = torch.empty(0, dtype=x2.dtype, device=x2.device)
+        # del x2
+        # torch.cuda.synchronize()
+        # # temp_x2 = x2.detach().clone()
+        #
+        # gc.collect()
+        # torch.cuda.empty_cache()
 
-    b = 1
+        x4 = self.fc4(x3)
+        # x3.data = torch.empty(0, dtype=x3.dtype, device=x3.device)
+        # torch.cuda.synchronize()
+        # temp_x3 = x2.detach().clone()
+        # del x2
+        # gc.collect()
+        # torch.cuda.empty_cache()
+
+        x5 = self.prelu(x4)
+        x6 = self.fc(x5)
+
+        # x5.data = torch.empty(0, dtype=x5.dtype, device=x5.device)
+        # torch.cuda.synchronize()
+        # temp_x5 = x5.detach().clone()
+        # del x5
+        # gc.collect()
+        # torch.cuda.empty_cache()
+        return x6
+
+
+def forward_by_offload(forward_tensor, input):
+    out = forward_tensor(input)
+    return out
+
+
+# 实例化模型并移到GPU
+model = SimpleMLP().to("cuda:0")
+offload_mgr = OffloadManager(model, 1)
+model_to_recompute_mode(model, offload_mgr)
+
+
+print_memory_usage("Param Use")
+
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+batch_size = 128
+inputs = torch.randn(batch_size, 1024, hidden_num).to(device)
+labels = torch.randint(0, 1024, (batch_size, 2048)).to(device)
+
+# 训练模型
+model.train()
+print_memory_usage("Before training")
+
+time_start = time.time()
+for epoch in range(1):
+    optimizer.zero_grad()
+    print_memory_usage("After zero_grad")
+
+    outputs = model(inputs)
+    print_memory_usage("After forward pass")
+
+    loss = criterion(outputs, labels)
+    print_memory_usage("After loss computation")
+
+    loss.backward()
+    print_memory_usage("After backward pass")
+
+    optimizer.step()
+    print_memory_usage("After optimizer step")
+
+print("Time train use: ", time.time() - time_start)
+
+# 去除梯度后的显存使用
+optimizer.zero_grad()
+print_memory_usage("After clearing gradients")
