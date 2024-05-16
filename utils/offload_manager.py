@@ -19,6 +19,8 @@ class OffloadManager:
         self._clear_cache_step = 8
         self.cur_step = 0
 
+        self.pre_load_stream = None
+
 
     def _update_offload_sort(self):
         self._offload_param_index_sort_list = sorted(self._offload_param_index_sort_list)
@@ -38,7 +40,7 @@ class OffloadManager:
         tensor_cpu_pinned = torch.empty(tensor_size, pin_memory=True, dtype=dtype)
         return tensor_cpu_pinned
 
-    def register_param(self, weight_tensor):
+    def register_and_offload_param(self, weight_tensor):
         assert weight_tensor.is_cuda
         device_index = weight_tensor.device.index
         param_index = weight_tensor.__dict__['param_index']
@@ -51,8 +53,7 @@ class OffloadManager:
         self._offload_param_index_sort_list.append(param_index)
         self._update_offload_sort()
 
-        # # Move weight_tensor to CPU
-        # self.param_offload(weight_tensor, init=True)
+        self.param_offload(weight_tensor, init=True)
 
     def mark_model_params(self):
         param_index = 0
@@ -67,36 +68,38 @@ class OffloadManager:
             param_index += 1
 
     def param_load(self, target_param, non_blocking: bool = True) -> None:
-        global wait_cache
+        # global wait_cache
         param_index = target_param.__dict__.get('param_index', -1)
         origin_device_index = target_param.__dict__.get('origin_device_index', -1)
 
         assert param_index > -1
         assert origin_device_index > -1
 
-        param_info = self._offload_param_map[param_index]
-
         origin_device = torch.device("cuda:%s" % origin_device_index)
         stream_key = 'cpu_to_cuda:%s' % origin_device_index
-        # 对于立马使用数据的，先确保前时刻任务都完成，才能准确判断参数所在位置，同时避免预加载冲突
-        if not non_blocking:
-            self.streams[stream_key].synchronize()
-        with torch.cuda.stream(self.streams[stream_key]):
-            if not target_param.is_cuda:
-                pin_tensor = param_info.get('cpu_pin_tensor', None)
+        new_stream_key = 'cuda:%s' % origin_device_index
+        if not non_blocking:  # 非预加载
+            if self.pre_load_stream:  #将上次预加载完全
+                self.pre_load_stream.synchronize()
 
-                assert pin_tensor is not None
+            with torch.cuda.stream(torch.cuda.Stream(new_stream_key)):
+            # with torch.cuda.stream(self.streams[stream_key]):
+                if not target_param.is_cuda:
+                    target_param.data = target_param.to(origin_device, non_blocking=non_blocking)
+            # self.streams[stream_key].synchronize()
+            # torch.cuda.synchronize()
 
-                target_param.data = pin_tensor.to(origin_device, non_blocking=non_blocking)
-                # target_param.data = target_param.to(origin_device, non_blocking=non_blocking)
+        else:
+            new_stream = torch.cuda.Stream(new_stream_key)
+            self.pre_load_stream = new_stream
+            with torch.cuda.stream(new_stream):
+                if not target_param.is_cuda:
+                    target_param.data = target_param.to(origin_device, non_blocking=non_blocking)
         load_param = time.time()
-        # print(f"[{non_blocking}] - load use time: {load_param-start_time:.5f} s")
-        # if not non_blocking:
-        #     torch.cuda.empty_cache()
-        #     self.streams[stream_key].synchronize()
 
-        wait_cache += time.time() - load_param
-        print(f"[wait_cache] wait empty_cache total use time: {wait_cache:.5f}")
+        #
+        # wait_cache += time.time() - load_param
+        # print(f"[wait_cache] wait empty_cache total use time: {wait_cache:.5f}")
 
 
     def next_param_load(self, cur_param, non_blocking: bool = True) -> None:
@@ -115,7 +118,7 @@ class OffloadManager:
             pre_param = self._offload_param_map[pre_param_index]['param']
             self.param_load(pre_param, non_blocking=non_blocking)
 
-    def param_offload(self, target_param, non_blocking: bool = True, init=False, forward=False) -> None:
+    def param_offload(self, target_param, non_blocking: bool = True, init=False, forward=False, backward=False) -> None:
 
         param_index = target_param.__dict__.get('param_index', -1)
         origin_device_index = target_param.__dict__.get('origin_device_index', -1)
@@ -123,34 +126,19 @@ class OffloadManager:
         assert param_index > -1
         assert origin_device_index > -1
 
-        param_info = self._offload_param_map[param_index]
-
         stream_key = 'cuda:%s_to_cpu' % origin_device_index
-        # stream_key = 'cpu_to_cuda:%s' % origin_device_index
         with torch.cuda.stream(self.streams[stream_key]):
 
             if target_param.is_cuda:
-                pin_tensor = param_info.get('cpu_pin_tensor', None)
+                target_param.data = target_param.to(self.offload_device, non_blocking=non_blocking)
 
-                assert pin_tensor is not None
-                pin_tensor.copy_(target_param, non_blocking=non_blocking)
-                target_param.data = torch.empty(0, device="cpu", dtype=target_param.dtype)
-
-                # target_param.data = target_param.to(self.offload_device, non_blocking=non_blocking)
+        self.cur_step += 1
 
         self.streams[stream_key].synchronize()
-        # need_sync_index_list = (self._offload_param_index_sort_list[0:20])
-        # need_sync_index_list.extend(self._offload_param_index_sort_list[-20:])
-        # or param_index == self._offload_param_index_sort_list[-1]
-        # self.cur_step += 1
+        torch.cuda.synchronize()
+        if self.cur_step % self._clear_cache_step == 0:
+            torch.cuda.empty_cache()
 
-        # if not forward and param_index not in self._offload_param_index_sort_list[0:10]:
-        #     return
-        # elif param_index in self._offload_param_index_sort_list[0:4]:
-        #     torch.cuda.empty_cache()
-        # else:
-        #     torch.cuda.empty_cache()
-        torch.cuda.empty_cache()
 
 
     def tensor_load(self, tensor, cuda_index=0, non_blocking: bool = True) -> None:
@@ -187,17 +175,17 @@ if __name__ == '__main__':
     # s = torch.cuda.Stream(device="cuda:0")
     # with torch.cuda.stream(s):
     for name, param in model.named_parameters():
-        offload_mgr.register_param(param)
+        offload_mgr.register_and_offload_param(param)
     init_time = time.time()
 
     print(f"init use time: {init_time - time_start:.5f} seconds")
 
-    # for name, param in model.named_parameters():
-    #     offload_mgr.param_load(param, non_blocking=False)
-    # load_time = time.time()
-    # print(f"load use time: {load_time - init_time:.5f} seconds")
-    #
-    # for name, param in model.named_parameters():
-    #     offload_mgr.param_offload(param, non_blocking=False)
-    # offload_time = time.time()
-    # print(f"offload use time: {offload_time - load_time:.5f} seconds")
+    for name, param in model.named_parameters():
+        offload_mgr.param_load(param, non_blocking=False)
+    load_time = time.time()
+    print(f"load use time: {load_time - init_time:.5f} seconds")
+
+    for name, param in model.named_parameters():
+        offload_mgr.param_offload(param, non_blocking=False)
+    offload_time = time.time()
+    print(f"offload use time: {offload_time - load_time:.5f} seconds")

@@ -53,9 +53,9 @@ class RecomputeLinearFunction(torch.autograd.Function):
         ctx.module = module
         start_time = time.time()
         load_time = start_time
-        # if ctx.module.offload_manager:
-        #     ctx.module.offload_manager.param_load(weight, non_blocking=False)
-        #     ctx.module.offload_manager.next_param_load(weight, non_blocking=True)
+        if ctx.module.offload_manager:
+            ctx.module.offload_manager.param_load(weight, non_blocking=False)
+            ctx.module.offload_manager.next_param_load(weight, non_blocking=True)
         #     load_time = time.time()
         #     forward_load_total += time.time() - start_time
             # print(f"[Forward] load from cpu, use: {time.time() - start_time:.5f} seconds ")
@@ -120,8 +120,8 @@ class RecomputeLinearFunction(torch.autograd.Function):
         backward_liner_total += linear_time - load_time
         # print(f"[Backward] back time: {linear_time - load_time:.5f} seconds\n")
 
-        # if ctx.module.offload_manager:
-        #     ctx.module.offload_manager.param_offload(weight)
+        if ctx.module.offload_manager:
+            ctx.module.offload_manager.param_offload(weight, backward=True)
             # ctx.module.offload_manager.tensor_offload(input)
         backward_offload_total += time.time() - linear_time
         backward_total += (time.time() - start_time)
@@ -146,7 +146,7 @@ class RecomputeLinear(torch.nn.Module):
         del weight
         self.offload_manager = offload_manager
         if offload_manager is not None:
-            self.offload_manager.register_param(self.weight)
+            self.offload_manager.register_and_offload_param(self.weight)
 
         self.bias = bias.detach() if bias is not None else None
         self.lr = lr
