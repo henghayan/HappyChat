@@ -66,7 +66,7 @@ def train_with_re_offload(
 
 
 if __name__ == '__main__':
-    path = "/data2/llm3-70"
+    path = "/data2/llm3-8"
     data_path = "/data/HappyChat/train_data/vir.json"
     train_with_re_offload(path, data_path, "/data/output")
 

@@ -29,39 +29,76 @@ def model_to_recompute_mode(module, offload_manager=None, lr=0.003):
         model_to_recompute_mode(child, offload_manager)
 
 
+forward_total = 0
+backward_total = 0
+
+forward_load_total = 0
+backward_load_total = 0
+
+forward_liner_total = 0
+backward_liner_total = 0
+
+forward_offload_total = 0
+backward_offload_total = 0
+
+forward_save_total = 0
+
+
 class RecomputeLinearFunction(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, input, weight, bias, module):
-        ctx.module = module
+        global forward_total, forward_liner_total, forward_load_total, forward_offload_total, forward_save_total
 
-        if ctx.module.offload_manager:
-            ctx.module.offload_manager.param_load(weight, non_blocking=False)
-            ctx.module.offload_manager.next_param_load(weight, non_blocking=True)
-            # ctx.module.offload_manager.param_load(weight, non_blocking=False)
-            # ctx.module.offload_manager.next_param_load(weight, non_blocking=True)
+        ctx.module = module
+        start_time = time.time()
+        load_time = start_time
+        # if ctx.module.offload_manager:
+        #     ctx.module.offload_manager.param_load(weight, non_blocking=False)
+        #     ctx.module.offload_manager.next_param_load(weight, non_blocking=True)
+        #     load_time = time.time()
+        #     forward_load_total += time.time() - start_time
+            # print(f"[Forward] load from cpu, use: {time.time() - start_time:.5f} seconds ")
             # if not input.is_cuda:
             #     ctx.module.offload_manager.tensor_load(input, non_blocking=False)
 
         output = torch.nn.functional.linear(input, weight, bias)
+        linear_time = time.time()
+        forward_liner_total += linear_time - load_time
+        # print(f"[Forward] linear use: {linear_time - load_time:.5f} seconds")
 
         if ctx.module.offload_manager:
-            ctx.module.offload_manager.param_offload(weight)
+            ctx.module.offload_manager.param_offload(weight, forward=True)
             # ctx.module.offload_manager.tensor_offload(input)
-        ctx.save_for_backward(input, weight, bias)
-        return output
+        offload_time = time.time()
+        forward_offload_total += offload_time - linear_time
 
+        ctx.save_for_backward(input, weight, bias)
+        forward_save_total += time.time() - offload_time
+        # print(f"[Forward] save use time: {time.time() - offload_time:.5f} seconds")
+
+        # print(f"[Forward] item use time: {time.time() - start_time:.5f} seconds ")
+        forward_total += time.time() - start_time
+        # print(f"[Forward] total use time: {forward_total:.5f} seconds; forward_load_total: {forward_load_total:.5f}\n")
+        return output
 
     @staticmethod
     def backward(ctx, grad_output):
+        global backward_total, backward_liner_total, backward_offload_total
+        global backward_load_total
         input, weight, bias = ctx.saved_tensors
 
+        start_time = time.time()
+        load_time = start_time
         if ctx.module.offload_manager:
             ctx.module.offload_manager.param_load(weight, non_blocking=False)
             ctx.module.offload_manager.pre_param_load(weight, non_blocking=True)
+            # torch.cuda.synchronize()
             # if not input.is_cuda:
             #     ctx.module.offload_manager.tensor_load(input)
-
+            load_time = time.time()
+            backward_load_total += load_time - start_time
+            # print(f"[Backward] load from cpu use: {time.time() - start_time:.5f} seconds")
         # input.data = input.to(weight.device)
         grad_input = grad_weight = grad_bias = None
         if ctx.needs_input_grad[0]:
@@ -78,11 +115,26 @@ class RecomputeLinearFunction(torch.autograd.Function):
         if bias is not None and ctx.needs_input_grad[2]:
             grad_bias = grad_output.sum(0)
             ctx.module.bias -= grad_bias * ctx.module.lr
+        torch.cuda.synchronize()
+        linear_time = time.time()
+        backward_liner_total += linear_time - load_time
+        # print(f"[Backward] back time: {linear_time - load_time:.5f} seconds\n")
 
-        if ctx.module.offload_manager:
-            ctx.module.offload_manager.param_offload(weight)
+        # if ctx.module.offload_manager:
+        #     ctx.module.offload_manager.param_offload(weight)
             # ctx.module.offload_manager.tensor_offload(input)
+        backward_offload_total += time.time() - linear_time
+        backward_total += (time.time() - start_time)
 
+        print(f"[forward] total use time: {forward_total:.5f};\n "
+              f"forward_load_total: {forward_load_total:.5f};\n "
+              f"forward_liner_total:{forward_liner_total:.5f};\n "
+              f"forward_offload_total:{forward_offload_total:.5f};\n "
+              f"[Backward] total use time: {backward_total:.5f} seconds;\n "
+              f"backward_load_total:{backward_load_total:.5f};\n "
+              f"backward_liner_total:{backward_liner_total:.5f};\n "
+              f"backward_offload_total:{backward_offload_total:.5f};\n\n "
+              f"forward_save_total:{forward_save_total}")
         return grad_input, grad_weight, grad_bias, None
 
 
@@ -94,7 +146,7 @@ class RecomputeLinear(torch.nn.Module):
         del weight
         self.offload_manager = offload_manager
         if offload_manager is not None:
-            self.offload_manager.add_offload_param_tensor(self.weight)
+            self.offload_manager.register_param(self.weight)
 
         self.bias = bias.detach() if bias is not None else None
         self.lr = lr
@@ -137,123 +189,5 @@ def recover_from_recompute_mode(module, same_device=False):
         recover_from_recompute_mode(child)
 
 
-###########################以下为测试代码#####################################
-
-import torch.nn as nn
-
-
-class TimeLinearFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, input, weight, bias, module):
-        ctx.module = module
-        ctx.save_for_backward(input, weight, bias)
-
-        # start_event = torch.cuda.Event(enable_timing=True)
-        # end_event = torch.cuda.Event(enable_timing=True)
-        # start_event.record()
-
-        output = torch.nn.functional.linear(input, weight, bias)
-
-        # end_event.record()
-
-        # torch.cuda.synchronize()
-        # elapsed_time = start_event.elapsed_time(end_event)
-        # print(f"[Forward] Time: {time.time()}, use_time:{elapsed_time}, layer:{module.i}, GPU:{module.c}")
-        return output
-
-    @staticmethod
-    def backward(ctx, grad_output):
-
-        input, weight, bias = ctx.saved_tensors
-        grad_input = grad_weight = grad_bias = None
-
-
-        # print("bias", bias.size())
-        # start_event = torch.cuda.Event(enable_timing=True)
-        # end_event = torch.cuda.Event(enable_timing=True)
-        # start_event.record()
-        print("ctx.needs_input_grad", ctx.needs_input_grad)
-        if ctx.needs_input_grad[0]:
-            # grad_input = torch.bmm(grad_output, weight.expand(grad_output.size(0), *weight.size()))
-            # 'ijk,kl->ijl' grad_output（ijk）和 weight（kl）相乘，然后对 k 维度进行求和，结果是 ijl
-            # 即 (batch_size, seq_length, in_features)
-            grad_input = torch.einsum('ijk,kl->ijl', grad_output, weight)
-        if ctx.needs_input_grad[1]:
-            # grad_weight = torch.bmm(input.transpose(1, 2), grad_output).sum(0).transpose(0, 1)
-            grad_weight = torch.einsum('ijk,ikl->jkl', input, grad_output).sum(dim=0)
-            ctx.module.weight -= grad_weight * ctx.module.lr
-        if bias is not None and ctx.needs_input_grad[2]:
-            grad_bias = grad_output.sum(0)
-            # ctx.module.bias -= grad_bias * ctx.module.lr
-
-        # end_event.record()
-
-        # torch.cuda.synchronize()
-        # elapsed_time = start_event.elapsed_time(end_event)
-        # print(f"[Backward] Time: {time.time()}, use_time:{elapsed_time}, layer:{ctx.module.i}, GPU:{ctx.module.c}")
-        return grad_input, grad_weight, grad_bias, None
-
-
-class TimeLinear(torch.nn.Module):
-    def __init__(self, in_, out, i, c):
-        super().__init__()
-        temp_linear = nn.Linear(in_, out)
-        self.weight = temp_linear.weight.detach().to(f"cuda:{c}")
-        self.bias = temp_linear.bias
-        self.lr = 0.1
-        self.i = i
-        self.c = c
-        self.device = f"cuda:{c}"
-
-    def forward(self, input_tensor):
-        return TimeLinearFunction.apply(input_tensor, self.weight, self.bias, self)
-
-
-class SimpleLinearModel(nn.Module):
-
-    def __init__(self):
-        super(SimpleLinearModel, self).__init__()
-
-        self.layers = nn.ModuleList([TempLinear(4096, 4096) for _ in range(2)])
-
-        self.fc = nn.Linear(4096, 512)
-
-    def forward(self, x):
-        for layer in self.layers:
-            x = layer(x)
-        x = self.fc(x)
-        return x
-
-
-class TempLinear(nn.Module):
-    def __init__(self, in_f, out_f):
-        super(TempLinear, self).__init__()
-        self.fc = torch.nn.Linear(in_f, out_f)
-
-    def forward(self, x):
-        return self.fc(x)
-
-
 if __name__ == "__main__":
-    model = SimpleLinearModel()
-    model.to("cuda:0")
-    # model = TransformerTest(d_model, num_heads, num_layers, 512, dtype=dtype)
-    criterion = nn.MSELoss()  # Loss function
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
-    # optimizer = optim.Adam(model.parameters(), lr=0.001)
-    model.train()
-
-    model_to_recompute_mode(model)
-
-    input_seq_tensor = torch.rand(8192, 2, 4096, dtype=torch.float32).to("cuda:0")
-    input_seq_tensor.requires_grad = True
-    target_seq_tensor = torch.randn(8192, 2, 512, dtype=torch.float32).to("cuda:0")
-
-    model.train()
-
-    model_to_recompute_mode(model)
-
-    output = model(input_seq_tensor)
-    loss = criterion(output, target_seq_tensor)
-    loss.backward()
-    optimizer.step()
+    pass
