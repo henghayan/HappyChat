@@ -14,7 +14,7 @@ print("sys.path", sys.path)
 
 def train_with_re_offload(
         base_model: str = "", data_path: str = "", output_dir: str = "", c_8bit=False, lora=False, device="cuda:0",
-        batch_size=256, micro_batch_size=32, num_epochs=1, learning_rate=0.0003, cutoff_len=512, gui=False, save=True
+        batch_size=256, micro_batch_size=128, num_epochs=8, learning_rate=0.00003, cutoff_len=512, gui=False, save=True
 ):
 
     gradient_accumulation_steps = int(batch_size) // int(micro_batch_size)
@@ -38,8 +38,8 @@ def train_with_re_offload(
         device_map="auto"
     )
 
-    offload_mgr = OffloadManager(model, 3)
-    model_to_recompute_mode(model, offload_mgr)
+    # offload_mgr = OffloadManager(model, 3)
+    model_to_recompute_mode(model, None)
     gc.collect()
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
@@ -52,7 +52,7 @@ def train_with_re_offload(
             num_train_epochs=int(num_epochs),
             learning_rate=float(learning_rate),
             output_dir=output_dir,
-            optim="adafactor"
+            # optim="adafactor"
         ),
         data_collator=transformers.DataCollatorForSeq2Seq(tokenizer, return_tensors="pt", padding=True),
     )

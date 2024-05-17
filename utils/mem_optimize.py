@@ -56,8 +56,8 @@ class RecomputeLinearFunction(torch.autograd.Function):
         if ctx.module.offload_manager:
             ctx.module.offload_manager.param_load(weight, non_blocking=False)
             ctx.module.offload_manager.next_param_load(weight, non_blocking=True)
-        #     load_time = time.time()
-        #     forward_load_total += time.time() - start_time
+            load_time = time.time()
+            forward_load_total += time.time() - start_time
             # print(f"[Forward] load from cpu, use: {time.time() - start_time:.5f} seconds ")
             # if not input.is_cuda:
             #     ctx.module.offload_manager.tensor_load(input, non_blocking=False)
