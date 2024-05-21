@@ -235,7 +235,7 @@ def test_gr():
 
 if __name__ == "__main__":
     print(transformers.__version__)
-    # main("/data2/awq_llm3_8", "/data2/awq_llm3_8", "cuda", False, get_args().c_8bit, get_args().lora)
+    main("/data2/awq_llm3_8", "/data2/awq_llm3_8", "cuda", False, get_args().c_8bit, get_args().lora)
     # test_gr()
 
-    main("/data2/llm3-70", "/data2/llm3-70", "cuda", False, get_args().c_8bit, get_args().lora)
+    # main("/data2/llm3-70", "/data2/llm3-70", "cuda", False, get_args().c_8bit, get_args().lora)

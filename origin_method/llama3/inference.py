@@ -5,7 +5,7 @@ import torch
 app = Flask(__name__)
 
 # 加载模型
-model_path = "/data/llm3-70b"
+model_path = "/data2/llm3-8"
 pipeline = transformers.pipeline(
     "text-generation",
     model=model_path,
@@ -53,6 +53,6 @@ def generate():
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=False)
 
 

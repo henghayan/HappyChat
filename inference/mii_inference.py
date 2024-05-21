@@ -86,7 +86,8 @@ def main(model_path, tokenizer_path, device="cuda:0", share=False, load_8bit=Fal
     print("tokenizer loaded ok")
     print("start load model...")
     # max_memory_mapping = {"cpu": "32GB", 0: "4GB", 1: "4GB", 2: "4GB"}
-    client = mii.serve(model_path, tensor_parallel=2, quantization_mode='wf6af16')
+    # client = mii.serve(model_path, tensor_parallel=2, quantization_mode='wf6af16')
+    client = mii.serve(model_path, tensor_parallel=2)
 
     print("start init evaluate_func ")
     #
@@ -235,7 +236,7 @@ def test_gr():
 
 if __name__ == "__main__":
     print(transformers.__version__)
-    # main("/data2/awq_llm3_8", "/data2/awq_llm3_8", "cuda", False, get_args().c_8bit, get_args().lora)
+    main("/data2/awq_llm3_8", "/data2/awq_llm3_8", "cuda", False, get_args().c_8bit, get_args().lora)
     # test_gr()
 
-    main("/data2/llm3-70-half", "/data2/llm3-70-half", "cuda", False, get_args().c_8bit, get_args().lora)
+    # main("/data2/llm3-70-half", "/data2/llm3-70-half", "cuda", False, get_args().c_8bit, get_args().lora)

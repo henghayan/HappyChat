@@ -15,7 +15,6 @@ from transformers.models.llama.modeling_llama import LlamaForCausalLM
 import transformers
 
 
-
 def wrap_evaluate(model, tokenizer, device, prompt_template=""):
     prompter = Prompter(prompt_template, real_template=False)
 
@@ -34,11 +33,17 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
         inputs = tokenizer(prompt, return_tensors="pt")
         input_ids = inputs["input_ids"].to(device)
         print("input_ids", input_ids)
+        terminators = [
+            tokenizer.eos_token_id,
+            tokenizer.convert_tokens_to_ids("<|eot_id|>")
+        ]
         generation_config = GenerationConfig(
             temperature=temperature,
             top_p=top_p,
             top_k=top_k,
+            # eos_token_id=terminators,
             num_beams=num_beams,
+
             **kwargs,
         )
 
@@ -86,6 +91,7 @@ def wrap_evaluate(model, tokenizer, device, prompt_template=""):
                 return_dict_in_generate=True,
                 output_scores=True,
                 max_new_tokens=max_new_tokens,
+                q=1
             )
         s = generation_output.sequences[0]
         output = tokenizer.decode(s)
@@ -269,8 +275,6 @@ def test_gr():
 
 if __name__ == "__main__":
     print(transformers.__version__)
-    path = '/data2/nv_llm_70'
+    path = '/data2/llm3-8'
     main(path, path, "cuda", False, get_args().c_8bit, get_args().lora)
     # test_gr()
-
-

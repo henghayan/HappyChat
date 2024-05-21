@@ -104,7 +104,7 @@ def main(model_path, tokenizer_path, device="cuda:0", share=False, load_8bit=Fal
     print("tokenizer loaded ok")
     print("start load model...")
     # max_memory_mapping = {"cpu": "32GB", 0: "4GB", 1: "4GB", 2: "4GB"}
-    client = LLM(model=model_path, quantization="AWQ", tensor_parallel_size=2)
+    client = LLM(model=model_path, tensor_parallel_size=2)
     # client = LLM(model=model_path, quantization="AWQ")
 
     print("start init evaluate_func ")
@@ -251,17 +251,30 @@ def test_gr():
 if __name__ == "__main__":
     # print(transformers.__version__)55
     # main("/data2/awq_llm3_8", "/data2/awq_llm3_8", "cuda", False, get_args().c_8bit, get_args().lora)
+    main("/data2/llm3-8", "/data2/llm3-8", "cuda", False, get_args().c_8bit, get_args().lora)
+
     # test_gr()
 
-    main("/data/awq_llm3_70", "/data/awq_llm3_70", "cuda", False, get_args().c_8bit, get_args().lora)
+    # main("/data/awq_llm3_70", "/data/awq_llm3_70", "cuda", False, get_args().c_8bit, get_args().lora)
 
     # test_data = '''<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-    # Always answer with Haiku<|eot_id|><|start_header_id|>user<|end_header_id|>
-    # I am going to Paris, what should I see?<|eot_id|><|start_header_id|>assistant<|end_header_id|>'''
+    # 你是一个中文机器人，总是使用中文回复<|eot_id|><|start_header_id|>user<|end_header_id|>
+    # 说说美国的历史,1000字。<|eot_id|><|start_header_id|>assistant<|end_header_id|>'''
+    # test_data1 = '''<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    #     你是一个中文机器人，总是使用中文回复<|eot_id|><|start_header_id|>user<|end_header_id|>
+    #     说说中国的历史,1000字。<|eot_id|><|start_header_id|>assistant<|end_header_id|>'''
     #
-    # test_2 = "Hello, my name is"
+    # data = []
+    # for i in range(1):
+    #     data.append(test_data)
+    #     data.append(test_data1)
     #
-    # sampling_params = SamplingParams(temperature=0.8, top_p=0.95)
-    # llm = LLM(model="/data/awq_llm3_8", quantization="AWQ")
-    # outputs = llm.generate([test_data, test_2], sampling_params)
-    # print("output", outputs)
+    # # test_2 = "Hello, my name is"
+    #
+    # sampling_params = SamplingParams(temperature=0.8, top_p=0.95, max_tokens=1024)
+    # llm = LLM(model="/data/awq_llm3_8", quantization="AWQ", tensor_parallel_size=2)
+    # start = time.time()
+    # outputs = llm.generate(data, sampling_params)
+    # print("output", outputs[1])
+    # print('use time:', time.time() - start)
+    # a = 1

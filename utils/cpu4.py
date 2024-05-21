@@ -2,133 +2,65 @@ import torch
 import time
 
 
-def test_async_w_r(size):
-    w_tensor = torch.randn(size, device='cuda', dtype=torch.float32)
-    w_pin = torch.empty(size, pin_memory=True, dtype=torch.float32)
-    r_tensor = torch.randn(size, device='cpu', dtype=torch.float32)
+# 函数：测试多 GPU 同步传输速度
+def test_multi_gpu_sync_transfer(size):
+    num_gpus = torch.cuda.device_count()
+    tensors = [torch.randn(size, size).cuda(i) for i in range(num_gpus)]
 
-    stream_write = torch.cuda.Stream()
-    stream_read = torch.cuda.Stream()
-
+    # 测试从多个 GPU 到 CPU 的同步传输时间
     start_time = time.time()
+    tensors_cpu = [tensor.cpu() for tensor in tensors]
+    multi_gpu_to_cpu_sync_time = time.time() - start_time
 
-    with torch.cuda.stream(stream_write):
-        w_pin.copy_(w_tensor, non_blocking=True)
-
-    with torch.cuda.stream(stream_read):
-        r_tensor = r_tensor.to("cuda", non_blocking=True)
-
-    write_event = torch.cuda.Event()
-    read_event = torch.cuda.Event()
-
-    stream_write.record_event(write_event)
-    stream_read.record_event(read_event)
-
-    write_event.synchronize()
-    read_event.synchronize()
-
-    end_time = time.time()
-    print('Async end_time:', end_time - start_time)
-
-
-def test_sync_w_r(size):
-    w_tensor = torch.randn(size, device='cuda', dtype=torch.float32)
-    w_pin = torch.empty(size, pin_memory=True, dtype=torch.float32)
-    r_tensor = torch.randn(size, device='cpu', dtype=torch.float32)
-
-    stream = torch.cuda.Stream()
-
+    # 测试从 CPU 到多个 GPU 的同步传输时间
+    tensors_cpu = [torch.randn(size, size) for _ in range(num_gpus)]
     start_time = time.time()
+    tensors_gpu = [tensor.cuda(i) for i, tensor in enumerate(tensors_cpu)]
+    multi_cpu_to_gpu_sync_time = time.time() - start_time
 
-    with torch.cuda.stream(stream):
-        w_pin.copy_(w_tensor, non_blocking=False)
-    stream.synchronize()
-    w_end_time = time.time()
-    print('Sync w_pin:', w_end_time - start_time)
-
-    with torch.cuda.stream(stream):
-        r_tensor = r_tensor.to("cuda", non_blocking=False)
-    stream.synchronize()
-    r_end_time = time.time()
-    print('Sync r_end_time:', r_end_time - w_end_time)
-    print("Sync total:", r_end_time - start_time)
+    return multi_gpu_to_cpu_sync_time, multi_cpu_to_gpu_sync_time
 
 
-def test_async_w_r_multi_gpu(size):
-    w_tensor = torch.randn(size, device='cuda:0', dtype=torch.float32)
-    w_pin = torch.empty(size, pin_memory=True, dtype=torch.float32)
-    r_tensor = torch.randn(size, device='cpu', dtype=torch.float32)
+# 函数：测试多 GPU 异步传输速度
+def test_multi_gpu_async_transfer(size):
+    num_gpus = torch.cuda.device_count()
+    tensors = [torch.randn(size, size).cuda(i) for i in range(num_gpus)]
 
-    stream_write = torch.cuda.Stream(device='cuda:0')
-    stream_read = torch.cuda.Stream(device='cuda:1')
-
+    # 测试从多个 GPU 到 CPU 的异步传输时间
+    streams = [torch.cuda.Stream(device=i) for i in range(num_gpus)]
     start_time = time.time()
+    for i, tensor in enumerate(tensors):
+        with torch.cuda.stream(streams[i]):
+            tensor.data = tensor.to("cpu", non_blocking=True)
+    torch.cuda.synchronize()
+    multi_gpu_to_cpu_async_time = time.time() - start_time
 
-    with torch.cuda.stream(stream_write):
-        w_pin.copy_(w_tensor, non_blocking=True)
-
-    with torch.cuda.stream(stream_read):
-        r_tensor = r_tensor.to("cuda:1", non_blocking=True)
-
-    write_event = torch.cuda.Event()
-    read_event = torch.cuda.Event()
-
-    stream_write.record_event(write_event)
-    stream_read.record_event(read_event)
-
-    write_event.synchronize()
-    read_event.synchronize()
-
-    end_time = time.time()
-    print('Multi-GPU Async end_time:', end_time - start_time)
-
-
-def test_async_w_r_chunked(size, chunk_size):
-    w_tensor = torch.randn(size, device='cuda', dtype=torch.float32)
-    w_pin = torch.empty(size, pin_memory=True, dtype=torch.float32)
-    r_tensor = torch.randn(size, device='cpu', dtype=torch.float32)
-
-    stream_write = torch.cuda.Stream()
-    stream_read = torch.cuda.Stream()
-
+    # 测试从 CPU 到多个 GPU 的异步传输时间
+    tensors_cpu = [torch.randn(size, size) for _ in range(num_gpus)]
+    streams = [torch.cuda.Stream(device=i) for i in range(num_gpus)]
     start_time = time.time()
+    for i, tensor in enumerate(tensors_cpu):
+        with torch.cuda.stream(streams[i]):
+            tensor.cuda(i, non_blocking=True)
 
-    num_chunks = size[0] // chunk_size
-    for i in range(num_chunks):
-        start_idx = i * chunk_size
-        end_idx = (i + 1) * chunk_size
+    torch.cuda.synchronize()
+    multi_cpu_to_gpu_async_time = time.time() - start_time
 
-        with torch.cuda.stream(stream_write):
-            w_pin[start_idx:end_idx].copy_(w_tensor[start_idx:end_idx], non_blocking=True)
-
-        with torch.cuda.stream(stream_read):
-            r_tensor[start_idx:end_idx] = r_tensor[start_idx:end_idx].to("cuda", non_blocking=True)
-
-    write_event = torch.cuda.Event()
-    read_event = torch.cuda.Event()
-
-    stream_write.record_event(write_event)
-    stream_read.record_event(read_event)
-
-    write_event.synchronize()
-    read_event.synchronize()
-
-    end_time = time.time()
-    print('Chunked Async end_time:', end_time - start_time)
+    return multi_gpu_to_cpu_async_time, multi_cpu_to_gpu_async_time
 
 
-# 测试样本大小和块大小
-size = (4096, 4096, 4096)  # 更大的数据集
-chunk_size = 1024  # 块大小
+# 设定测试的张量大小
+tensor_size = 2**14
 
-print("Testing Async Write and Read")
-test_async_w_r(size)
+# 多个 GPU 的同步传输速度测试
+if torch.cuda.device_count() > 1:
+    multi_gpu_to_cpu_sync_time, multi_cpu_to_gpu_sync_time = test_multi_gpu_sync_transfer(tensor_size)
+    print(f"Multi-GPU to CPU sync transfer time: {multi_gpu_to_cpu_sync_time:.6f} seconds")
+    print(f"Multi-CPU to GPU sync transfer time: {multi_cpu_to_gpu_sync_time:.6f} seconds")
 
-print("\nTesting Sync Write and Read")
-test_sync_w_r(size)
-
-print("\nTesting Multi-GPU Async Write and Read")
-test_async_w_r_multi_gpu(size)
-
-print("\nTesting Chunked Async Write and Read")
-test_async_w_r_chunked(size, chunk_size)
+    # 多个 GPU 的异步传输速度测试
+    multi_gpu_to_cpu_async_time, multi_cpu_to_gpu_async_time = test_multi_gpu_async_transfer(tensor_size)
+    print(f"Multi-GPU to CPU async transfer time: {multi_gpu_to_cpu_async_time:.6f} seconds")
+    print(f"Multi-CPU to GPU async transfer time: {multi_cpu_to_gpu_async_time:.6f} seconds")
+else:
+    print("Only one GPU is available. Multi-GPU transfer test is skipped.")
